@@ -18,17 +18,47 @@ function draw()
 end
 */
 
-var mode; // true for edit, false for run
 var cm;
 var prelua;
 var postlua;
 var ctx;
 var luaDraw;
 var LuaState;
+var LuaExt;
+var Module;
+
+function Timer(callback, delay) {
+    var timerId, start, remaining = delay;
+    var self = this;
+    
+    this.isPaused = false;
+    
+    this.pause = function() {
+        window.clearTimeout(timerId);
+        remaining -= new Date() - start;
+	self.isPaused = true;
+    };
+
+    this.resume = function() {
+        start = new Date();
+        window.clearTimeout(timerId);
+        timerId = window.setTimeout(callback, remaining);
+	self.isPaused = false;
+    };
+
+    this.stop = function() {
+	window.clearTimeout(timerId);
+    }
+   
+    this.resume();
+}
 
 function init() {
-    setMode(true);
-    $('#execute').click(buttonClicked);
+    $('#execute').click(runCode);
+    $('#edit').click(startEditing);
+    $('#pause').click(pauseCode);
+    $('#restart').click(restartCode);
+    startEditing();
     cm = CodeMirror.fromTextArea(document.getElementById('code'),
 				 {
 				     value: template(),
@@ -38,6 +68,8 @@ function init() {
     var cvs = $('#cvs')[0];
     ctx = cvs.getContext('2d');
 }
+
+$(document).ready(init);
 
 function executeLua(code,cl) {
     var lcode = prelua() + '\n' + code + '\n' + postlua();
@@ -56,29 +88,41 @@ function executeLua(code,cl) {
 
 function stopLua() {
     if (luaDraw) {
-	window.clearInterval(luaDraw);
+	luaDraw.stop();
     }
 }
 
-function toggleMode() {
-    setMode(!mode);
+function startEditing() {
+    stopLua();
+    $('#run').css('display','none');
+    $('#runButtons').css('display','none');
+    $('#editButtons').css('display','block');
+    $('#editor').css('display','block');
+    setEditorSize();
 }
 
-function setMode(m) {
-    if (mode !== m) {
-	mode = m;
-	if (mode) {
-	    stopLua();
-	    $('#run').css('display','none');
-	    $('#editor').css('display','block');
-	    $('#execute').text('Execute');
-	    setEditorSize();
+function runCode() {
+    $('#editor').css('display','none');
+    $('#editButtons').css('display','none');
+    $('#runButtons').css('display','block');
+    $('#run').css('display','block');
+    setExecuteSize();
+    executeLua(cm.getValue(),true);
+}
+
+function restartCode() {
+    stopLua();
+    executeLua(cm.getValue(),true);
+}
+
+function pauseCode() {
+    if (luaDraw) {
+	if (luaDraw.isPaused) {
+	    luaDraw.resume();
+	    $('#pause').text('Pause');
 	} else {
-	    $('#editor').css('display','none');
-	    $('#run').css('display','block');
-	    $('#execute').text('Edit');
-	    setExecuteSize();
-	    executeLua(cm.getValue(),true);
+	    luaDraw.pause();
+	    $('#pause').text('Resume');
 	}
     }
 }
@@ -101,8 +145,12 @@ function setExecuteSize() {
     $('#cvs').attr('height',h - 6); // not sure why 6 here
 }
 
-function buttonClicked() {
-    toggleMode();
+function executeClicked() {
+    setMode(false);
+}
+
+function editClicked() {
+    setMode(true);
 }
 
 Module = {
@@ -143,16 +191,100 @@ function identityMatrix() {
 
 LuaState = getLuaState();
 
+function applyTransform(x,y) {
+    var m = LuaState.matrix[0];
+    var ch = ctx.canvas.height;
+    var xx = m[0]*x + m[2]*y + m[4];
+    var yy = m[1]*x + m[3]*y + m[5];
+    return {x: xx, y: ch - yy}
+}
+
+function applyTransformNoShift(x,y) {
+    var m = LuaState.matrix[0];
+    var ch = ctx.canvas.height;
+    var xx = m[0]*x + m[2]*y;
+    var yy = m[1]*x + m[3]*y;
+    return {x: xx, y: - yy}
+}
+
+function clear(c) {
+    c.save();
+    c.setTransform(1,0,0,1,0,0);
+    c.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    c.restore();
+}
+
+function prelua() {
+    var str =
+	'do ' +
+	'WIDTH = ' + $('#cvs').attr('width') + ' ' +
+	'HEIGHT = ' + $('#cvs').attr('height') + ' ';
+    Object.keys(LuaExt).forEach(function(v,i,a) {
+	str += 'function ' + v + '(...) return js.global.LuaExt:' + v + '(...) end '
+    })
+    str += 'stroke(255,255,255) ' +
+	'fill(0,0,0) ' +
+	'function setup() end ' +
+	'function draw() end ' +
+	'function touched() end ' +
+	'do ';
+    return str;
+}
+
+function postlua() {
+	return 'end ' +
+	'setup() ' +
+	'do js.global:doCycle(draw,touched) end ' +
+	'end';
+}
+
+function doCycle(d,t) {
+    luaDraw = new Timer(
+	function() {
+	    LuaState.matrix = [identityMatrix()];
+	    d();
+	    doCycle(d,t);
+	},
+	10);
+}
+
+function template() {
+    var str = 'function setup()\n' +
+	'x = 0\n' +
+	'print(strokeWidth())\n' +
+	'print("hello")\n' +
+	'end\n\n' +
+	'function draw()\n' +
+	'background(40,40,50)\n' +
+	'fill(150,200,30)\n' + 
+	'stroke(200,30,150)\n' +
+	'strokeWidth(10)\n' +
+	'rect(x,20,100,100)\n' + 
+	'x = x + 1\n' +
+	'end\n'
+    return str;
+}
+
 LuaExt = {
     rect: function(x,y,w,h) {
 	var p = applyTransform(x,y);
+	var r = applyTransformNoShift(w,0);
+	var s = applyTransformNoShift(0,h);
 	if (LuaState.style[0].fill) {
 	    ctx.beginPath();
-	    ctx.fillRect(p.x,p.y,w,h);
+	    ctx.save();
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
+	    ctx.rect(0,0,1,1);
+	    ctx.restore();
+	    ctx.fill();
 	}
 	if (LuaState.style[0].stroke) {
 	    ctx.beginPath();
-	    ctx.strokeRect(p.x,p.y,w,h);
+	    ctx.save();
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
+	    ctx.rect(0,0,1,1);
+	    ctx.restore();
+	    ctx.stroke();
 	}
     },
     background: function(r,g,b,a = 255) {
@@ -219,11 +351,12 @@ LuaExt = {
 	    h = w;
 	}
 	var p = applyTransform(x,y);
+	var r = applyTransformNoShift(w,0);
+	var s = applyTransformNoShift(0,h);
 	if (LuaState.style[0].fill) {
 	    ctx.save();
 	    ctx.beginPath();
-	    ctx.translate(p.x,p.y);
-	    ctx.scale(w,h);
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
 	    ctx.arc(0,0,1,0, 2 * Math.PI,false);
 	    ctx.restore();
 	    ctx.fill();
@@ -231,8 +364,7 @@ LuaExt = {
 	if (LuaState.style[0].stroke) {
 	    ctx.save();
 	    ctx.beginPath();
-	    ctx.translate(p.x,p.y);
-	    ctx.scale(w,h);
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
 	    ctx.arc(0,0,1,0, 2 * Math.PI,false);
 	    ctx.restore();
 	    ctx.stroke();
@@ -270,76 +402,23 @@ LuaExt = {
 	LuaState.matrix[0][4] += x;
 	LuaState.matrix[0][5] += y;
     },
+    scale: function(a,b) {
+	if (typeof(b) === "undefined")
+	    b = a;
+	LuaState.matrix[0][0] *= a;
+	LuaState.matrix[0][1] *= a;
+	LuaState.matrix[0][2] *= b;
+	LuaState.matrix[0][3] *= b;
+    },
+    xsheer: function(a) {
+	LuaState.matrix[0][2] += LuaState.matrix[0][0] * a;
+	LuaState.matrix[0][3] += LuaState.matrix[0][1] * a;
+    },
+    ysheer: function(a) {
+	LuaState.matrix[0][0] += LuaState.matrix[0][2] * a;
+	LuaState.matrix[0][1] += LuaState.matrix[0][3] * a;
+    },
     clearState: function() {
 	LuaState = getLuaState();
     }
 }
-
-function applyTransform(x,y) {
-    var m = LuaState.matrix[0];
-    var ch = ctx.canvas.height;
-    var xx = m[0]*x + m[2]*y + m[4];
-    var yy = m[1]*x + m[3]*y + m[5];
-    return {x: xx, y: ch - yy}
-}
-
-function clear(c) {
-    c.save();
-    c.setTransform(1,0,0,1,0,0);
-    c.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-    c.restore();
-}
-
-function prelua() {
-    var str =
-	'do ' +
-	'WIDTH = ' + $('#cvs').attr('width') + ' ' +
-	'HEIGHT = ' + $('#cvs').attr('height') + ' ';
-    Object.keys(LuaExt).forEach(function(v,i,a) {
-	str += 'function ' + v + '(...) return js.global.LuaExt:' + v + '(...) end '
-    })
-    str += 'stroke(255,255,255) ' +
-	'fill(0,0,0) ' +
-	'function setup() end ' +
-	'function draw() end ' +
-	'function touched() end ' +
-	'do ';
-    return str;
-}
-
-function postlua() {
-	return 'end ' +
-	'setup() ' +
-	'do js.global:doCycle(draw,touched) end ' +
-	'end';
-}
-
-function doCycle(d,t) {
-    luaDraw = window.setTimeout(
-	function() {
-	    LuaState.matrix = [identityMatrix()];
-	    d();
-	    doCycle(d,t);
-	},
-	10);
-}
-
-function template() {
-    var str = 'function setup()\n' +
-	'x = 0\n' +
-	'print(strokeWidth())\n' +
-	'print("hello")\n' +
-	'end\n\n' +
-	'function draw()\n' +
-	'background(40,40,50)\n' +
-	'fill(150,200,30)\n' + 
-	'stroke(200,30,150)\n' +
-	'strokeWidth(10)\n' +
-	'rect(x,20,100,100)\n' + 
-	'x = x + 1\n' +
-	'end\n'
-    return str;
-}
-
-$(document).ready(init);
-
