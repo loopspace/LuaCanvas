@@ -4,9 +4,54 @@
     <meta charset="utf-8">
     <title>Lua Canvas</title>
     <link href="css/main.css" rel="stylesheet">
+    <link href="css/jquery-ui.min.css" rel="stylesheet">
     <script src="js/codemirror.js"></script>
+    <script src="js/addon/edit/closebrackets.js"></script>
+    <script src="js/addon/edit/matchbrackets.js"></script>
     <link href="css/codemirror.css" rel="stylesheet">
-    <script src="js/jquery-1.11.3.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="css/theme/3024-day.css">
+    <link rel="stylesheet" href="css/theme/3024-night.css">
+    <link rel="stylesheet" href="css/theme/abcdef.css">
+    <link rel="stylesheet" href="css/theme/ambiance.css">
+    <link rel="stylesheet" href="css/theme/base16-dark.css">
+    <link rel="stylesheet" href="css/theme/base16-light.css">
+    <link rel="stylesheet" href="css/theme/blackboard.css">
+    <link rel="stylesheet" href="css/theme/cobalt.css">
+    <link rel="stylesheet" href="css/theme/colorforth.css">
+    <link rel="stylesheet" href="css/theme/dracula.css">
+    <link rel="stylesheet" href="css/theme/eclipse.css">
+    <link rel="stylesheet" href="css/theme/elegant.css">
+    <link rel="stylesheet" href="css/theme/erlang-dark.css">
+    <link rel="stylesheet" href="css/theme/icecoder.css">
+    <link rel="stylesheet" href="css/theme/lesser-dark.css">
+    <link rel="stylesheet" href="css/theme/liquibyte.css">
+    <link rel="stylesheet" href="css/theme/material.css">
+    <link rel="stylesheet" href="css/theme/mbo.css">
+    <link rel="stylesheet" href="css/theme/mdn-like.css">
+    <link rel="stylesheet" href="css/theme/midnight.css">
+    <link rel="stylesheet" href="css/theme/monokai.css">
+    <link rel="stylesheet" href="css/theme/neat.css">
+    <link rel="stylesheet" href="css/theme/neo.css">
+    <link rel="stylesheet" href="css/theme/night.css">
+    <link rel="stylesheet" href="css/theme/paraiso-dark.css">
+    <link rel="stylesheet" href="css/theme/paraiso-light.css">
+    <link rel="stylesheet" href="css/theme/pastel-on-dark.css">
+    <link rel="stylesheet" href="css/theme/rubyblue.css">
+    <link rel="stylesheet" href="css/theme/seti.css">
+    <link rel="stylesheet" href="css/theme/solarized.css">
+    <link rel="stylesheet" href="css/theme/the-matrix.css">
+    <link rel="stylesheet" href="css/theme/tomorrow-night-bright.css">
+    <link rel="stylesheet" href="css/theme/tomorrow-night-eighties.css">
+    <link rel="stylesheet" href="css/theme/ttcn.css">
+    <link rel="stylesheet" href="css/theme/twilight.css">
+    <link rel="stylesheet" href="css/theme/vibrant-ink.css">
+    <link rel="stylesheet" href="css/theme/xq-dark.css">
+    <link rel="stylesheet" href="css/theme/xq-light.css">
+    <link rel="stylesheet" href="css/theme/yeti.css">
+    <link rel="stylesheet" href="css/theme/zenburn.css">
+    <script src="js/jquery-1.11.3.min.js"
+	    type="text/javascript"></script>
+    <script src="js/jquery-ui.min.js" type="text/javascript"></script>
     <script src="js/lua.js"></script>
     <script src="js/main.js"></script>
     <script src="js/lua.vm.js"></script>
@@ -15,9 +60,61 @@
     <div id="container">
       <div id="editor">
 	<div id="tabsdiv">
+	  <span id="title" contenteditable="true">Project</span>
 	  <ol id="tabs">
-	    <li>Main
+	    <li class="tab
+	    tabstyle" id="Main"><span class="handle">⇔</span><span contenteditable="true"
+	    class="tabtitle current">Main</span>
+	    <li class="tabstyle control"><a href="#" id="add" class="nolink">+</a>
 	  </ol>
+	  <div id="themediv">
+	    <form id="cmtheme">Editor Theme:
+	      <select id="theme">
+		<option selected>default</option>
+		<option>3024-day</option>
+		<option>3024-night</option>
+		<option>abcdef</option>
+		<option>ambiance</option>
+		<option>base16-dark</option>
+		<option>base16-light</option>
+		<option>blackboard</option>
+		<option>cobalt</option>
+		<option>colorforth</option>
+		<option>dracula</option>
+		<option>eclipse</option>
+		<option>elegant</option>
+		<option>erlang-dark</option>
+		<option>icecoder</option>
+		<option>lesser-dark</option>
+		<option>liquibyte</option>
+		<option>material</option>
+		<option>mbo</option>
+		<option>mdn-like</option>
+		<option>midnight</option>
+		<option>monokai</option>
+		<option>neat</option>
+		<option>neo</option>
+		<option>night</option>
+		<option>paraiso-dark</option>
+		<option>paraiso-light</option>
+		<option>pastel-on-dark</option>
+		<option>rubyblue</option>
+		<option>seti</option>
+		<option>solarized dark</option>
+		<option>solarized light</option>
+		<option>the-matrix</option>
+		<option>tomorrow-night-bright</option>
+		<option>tomorrow-night-eighties</option>
+		<option>ttcn</option>
+		<option>twilight</option>
+		<option>vibrant-ink</option>
+		<option>xq-dark</option>
+		<option>xq-light</option>
+		<option>yeti</option>
+		<option>zenburn</option>
+	      </select>
+	    </form>
+	  </div>
 	</div>
 	<div id="codediv">
 	  <textarea id="code"></textarea>
@@ -34,6 +131,13 @@
       <p id="buttons">
 	<div id="editButtons">
 	  <a href="#" id="execute" class="link_button">Execute</a>
+	  <a href="#" id="save" class="link_button">Save</a>
+	  <form class="file_select">
+	    <div class="fileUpload link_button">
+	      <span>Load</span>
+	      <input type="file" class="upload" id="load">
+	    </div>
+	  </form>
 	</div>
 	<div id="runButtons">
 	  <a href="#" id="edit" class="link_button">Edit</a>
