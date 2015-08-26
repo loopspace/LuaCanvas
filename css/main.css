@@ -24,6 +24,7 @@ body {
     background-color: #ccc;
     padding: 10px;
     float: left;
+    overflow: scroll;
 }
 
 #canvas {
