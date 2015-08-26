@@ -26,6 +26,8 @@ var luaDraw;
 var LuaState;
 var LuaExt;
 var Module;
+var sTime;
+var inTouch;
 var tabs = {};
 
 function init() {
@@ -39,6 +41,9 @@ function init() {
     $('#theme').change(selectTheme);
     $('.handle').click(switchTab);
     $('.tabtitle').change(renameTab);
+    $('#cvs').mousedown(startTouch);
+    $('#cvs').mouseup(stopTouch);
+    $('#cvs').mouseleave(stopTouch);
     $('.tabtitle').on('focus', startRename).on('blur keyup paste input', renameTab);
 
     $('#tabs').sortable({
@@ -94,6 +99,9 @@ function executeLua(code,cl) {
 	$('#output').css('color',null);
 	clear(ctx);
     }
+    var L = new Lua.State;
+    initialiseLua(L._G);
+    sTime = Date.now();
     try {
 	L.execute(lcode);
     } catch(e) {
@@ -200,7 +208,6 @@ function loadCode(f) {
 	while(i < code.length) {
 	    match = code[i].match(/^--## ([^\n]+)/);
 	    if (match !== null) {
-		console.log(match);
 		tabs[match[1]] = code[++i].trim();
 		if (first || match[1] == "Main" ) {
 		    curr = true;
@@ -311,7 +318,8 @@ function getLuaState() {
 	    fillColour: [0,0,0,255],
 	    strokeColour: [255,255,255,255],
 	    strokeWidth: 1,
-	}
+	},
+	touches: []
     }
 }
 
@@ -344,19 +352,62 @@ function clear(c) {
     c.restore();
 }
 
+function startTouch(e) {
+    recordTouch(e);
+    inTouch = true;
+    $('#cvs').mousemove(recordTouch);
+}
+
+function stopTouch(e) {
+    if (inTouch)
+	recordTouch(e);
+    $('#cvs').off('mousemove');
+    inTouch = false;
+}
+
+recordTouch = (function() {
+    var prevTouch;
+    return function(e) {
+	var s;
+	var px,py,dx,dy,x,y;
+	x = Math.floor(e.pageX - $('#cvs').offset().left);
+	y = $('#cvs').offset().top + parseInt($('#cvs').attr('height'),10) - e.pageY;
+	if (e.type == 'mousedown') {
+	    s = 'BEGAN';
+	} else if (e.type == 'mousemove') {
+	    s = 'MOVING';
+	    px = prevTouch.x;
+	    py = prevTouch.y;
+	    dx = x - px;
+	    dy = x - py;
+	} else if (e.type == 'mouseup' || e.type == 'mouseleave') {
+	    s = 'ENDED';
+	    px = prevTouch.x;
+	    py = prevTouch.y;
+	    dx = x - px;
+	    dy = x - py;
+	}
+	var t = {
+	    state: s,
+	    time: e.timestamp - sTime,
+	    x: x,
+	    y: y,
+	    prevX: px,
+	    prevY: py,
+	    deltaX: dx,
+	    deltaY: dy
+	};
+	prevTouch = t;
+	LuaState.touches.push(t);
+    }
+})();
+
 function prelua() {
-    var str = luaClass() +
+    var str =
+	luaClass() +
 	'do ' +
-	'WIDTH = ' + $('#cvs').attr('width') + ' ' +
-	'HEIGHT = ' + $('#cvs').attr('height') + ' ';
-    Object.keys(LuaExt).forEach(function(v,i,a) {
-	str += 'function ' + v + '(...) return js.global.LuaExt:' + v + '(...) end '
-    })
-    str += 'stroke(255,255,255) ' +
+	'stroke(255,255,255) ' +
 	'fill(0,0,0) ' +
-	'function setup() end ' +
-	'function draw() end ' +
-	'function touched() end ' +
 	'do ';
     return str;
 }
@@ -364,19 +415,46 @@ function prelua() {
 function postlua() {
 	return 'end ' +
 	'setup() ' +
-	'do js.global:doCycle(draw,touched) end ' +
+	'do js.global:initCycle(_G,draw,function (...) touched(select(2,...)) end) end ' +
 	'end';
 }
 
-function doCycle(d,t) {
-    luaDraw = new Timer(
-	function() {
-	    LuaState.matrix = [identityMatrix()];
-	    d();
-	    doCycle(d,t);
-	},
-	10);
-}
+initCycle = (function () {
+    var time;
+    var itime;
+    var G;
+    var draw;
+    var touched;
+
+    function doCycle() {
+	var t = Date.now();
+	var dt = t - time;
+	G.set('ElapsedTime',t - itime);
+	G.set('DeltaTime',t - time);
+	time = t;
+	luaDraw = new Timer(
+	    function() {
+		LuaState.matrix = [identityMatrix()];
+		draw();
+		LuaState.touches.forEach(touched);
+		LuaState.touches = [];
+		doCycle();
+	    },
+	    Math.max(10 - dt,0)
+	);
+    }
+    
+    return function(g,d,t) {
+	G = g;
+	draw = d;
+	touched = t;
+	time = sTime;
+	itime = sTime;
+	etime = 0;
+	doCycle();
+    }
+	
+})();
 
 function template() {
     var str = 'function setup()\n' +
@@ -414,47 +492,47 @@ function template() {
 
 function luaClass() {
     return 'function class(base)\n' +
-'    local c = {}    -- a new class instance\n' +
-'    if type(base) == \'table\' then\n' +
-'        -- our new class is a shallow copy of the base class!\n' +
-'        for i,v in pairs(base) do\n' +
-'            c[i] = v\n' +
-'        end\n' +
-'        c._base = base\n' +
-'    end\n' +
-'\n' +
-'    -- the class will be the metatable for all its objects,\n' +
-'    -- and they will look up their methods in it.\n' +
-'    c.__index = c\n' +
-'\n' +
-'    -- expose a constructor which can be called by <classname>(<args>)\n' +
-'    local mt = {}\n' +
-'    mt.__call = function(class_tbl, ...)\n' +
-'        local obj = {}\n' +
-'        setmetatable(obj,c)\n' +
-'        if class_tbl.init then\n' +
-'            class_tbl.init(obj,...)\n' +
-'        else \n' +
-'            -- make sure that any stuff from the base class is initialized!\n' +
-'            if base and base.init then\n' +
-'                base.init(obj, ...)\n' +
-'            end\n' +
-'        end\n' +
-'        \n' +
-'        return obj\n' +
-'    end\n' +
-'\n' +
-'    c.is_a = function(self, klass)\n' +
-'        local m = getmetatable(self)\n' +
-'        while m do \n' +
-'            if m == klass then return true end\n' +
-'            m = m._base\n' +
-'        end\n' +
-'        return false\n' +
-'    end\n' +
-'\n' +
-'    setmetatable(c, mt)\n' +
-'    return c\n' +
+	'    local c = {}    -- a new class instance\n' +
+	'    if type(base) == \'table\' then\n' +
+	'        -- our new class is a shallow copy of the base class!\n' +
+	'        for i,v in pairs(base) do\n' +
+	'            c[i] = v\n' +
+	'        end\n' +
+	'        c._base = base\n' +
+	'    end\n' +
+	'\n' +
+	'    -- the class will be the metatable for all its objects,\n' +
+	'    -- and they will look up their methods in it.\n' +
+	'    c.__index = c\n' +
+	'\n' +
+	'    -- expose a constructor which can be called by <classname>(<args>)\n' +
+	'    local mt = {}\n' +
+	'    mt.__call = function(class_tbl, ...)\n' +
+	'        local obj = {}\n' +
+	'        setmetatable(obj,c)\n' +
+	'        if class_tbl.init then\n' +
+	'            class_tbl.init(obj,...)\n' +
+	'        else \n' +
+	'            -- make sure that any stuff from the base class is initialized!\n' +
+	'            if base and base.init then\n' +
+	'                base.init(obj, ...)\n' +
+	'            end\n' +
+	'        end\n' +
+	'        \n' +
+	'        return obj\n' +
+	'    end\n' +
+	'\n' +
+	'    c.is_a = function(self, klass)\n' +
+	'        local m = getmetatable(self)\n' +
+	'        while m do \n' +
+	'            if m == klass then return true end\n' +
+	'            m = m._base\n' +
+	'        end\n' +
+	'        return false\n' +
+	'    end\n' +
+	'\n' +
+	'    setmetatable(c, mt)\n' +
+	'    return c\n' +
 	'end\n';
 }
 
@@ -484,9 +562,23 @@ function Timer(callback, delay) {
     this.resume();
 }
 
+function initialiseLua(g) {
+    g.set('WIDTH',$('#cvs').attr('width'));
+    g.set('HEIGHT',$('#cvs').attr('height'));
+    Object.keys(LuaExt).forEach(function(v,i,a) {
+	g.set(v, LuaExt[v]);
+    })
+    g.set('setup', function() {});
+    g.set('draw', function() {});
+    g.set('touched', function() {});
+}
 
+/*
+First argument is passed as 'this'.
+*/
 LuaExt = {
-    rect: function(x,y,w,h) {
+    rect: function(y,w,h) {
+	var x = this;
 	var p = applyTransform(x,y);
 	var r = applyTransformNoShift(w,0);
 	var s = applyTransformNoShift(0,h);
@@ -507,7 +599,8 @@ LuaExt = {
 	    ctx.stroke();
 	}
     },
-    background: function(r,g,b,a = 255) {
+    background: function(g,b,a = 255) {
+	var r = this;
 	var al = a/255;
 	ctx.save();
 	ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
@@ -516,7 +609,8 @@ LuaExt = {
 	ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
 	ctx.restore();
     },
-    fill: function (r,g,b,a = 255) {
+    fill: function (g,b,a = 255) {
+	var r = this;
 	if (typeof(r) !== 'undefined') {
 	    var al = a/255;
 	    ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
@@ -526,7 +620,8 @@ LuaExt = {
 	    return ctx.fillStyle;
 	}
     },
-    stroke: function (r,g,b,a = 255) {
+    stroke: function (g,b,a = 255) {
+	var r = this;
 	if (typeof(r) !== 'undefined') {
 	    var al = a/255;
 	    ctx.strokeStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
@@ -536,7 +631,8 @@ LuaExt = {
 	    return ctx.strokeStyle;
 	}
     },
-    strokeWidth: function (w) {
+    strokeWidth: function () {
+	var w = this;
 	if (typeof(w) !== 'undefined') {
 	    ctx.lineWidth = w;
 	    LuaState.style[0].strokeWidth = w;
@@ -551,7 +647,8 @@ LuaExt = {
     noStroke: function() {
 	    LuaState.style[0].stroke = false;
     },
-    line: function (x,y,xx,yy) {
+    line: function (y,xx,yy) {
+	var x = this;
 	if (LuaState.style[0].stroke) {
 	    var p = applyTransform(x,y);
 	    var pp = applyTransform(xx,yy);
@@ -561,12 +658,14 @@ LuaExt = {
 	    ctx.stroke();
 	}
     },
-    text: function (s,x,y) {
+    text: function (x,y) {
+	var s = this;
 	var p = applyTransform(x,y);
 	ctx.beginPath();
 	ctx.fillText(s,p.x,p.y);
     },
-    ellipse: function (x,y,w,h) {
+    ellipse: function (y,w,h) {
+	var x = this;
 	if (typeof(h) === "undefined") {
 	    h = w;
 	}
@@ -618,11 +717,13 @@ LuaExt = {
 	    LuaState.style[0][v] = LuaState.defaultStyle[v];
 	})
     },
-    translate: function(x,y) {
+    translate: function(y) {
+	var x = this;
 	LuaState.matrix[0][4] += x;
 	LuaState.matrix[0][5] += y;
     },
-    scale: function(a,b) {
+    scale: function(b) {
+	var a = this;
 	if (typeof(b) === "undefined")
 	    b = a;
 	LuaState.matrix[0][0] *= a;
@@ -630,11 +731,13 @@ LuaExt = {
 	LuaState.matrix[0][2] *= b;
 	LuaState.matrix[0][3] *= b;
     },
-    xsheer: function(a) {
+    xsheer: function() {
+	var a = this;
 	LuaState.matrix[0][2] += LuaState.matrix[0][0] * a;
 	LuaState.matrix[0][3] += LuaState.matrix[0][1] * a;
     },
-    ysheer: function(a) {
+    ysheer: function() {
+	var a = this;
 	LuaState.matrix[0][0] += LuaState.matrix[0][2] * a;
 	LuaState.matrix[0][1] += LuaState.matrix[0][3] * a;
     },
