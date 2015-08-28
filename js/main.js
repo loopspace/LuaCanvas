@@ -135,7 +135,9 @@ function selectTheme() {
 }
 
 function executeLua(code,cl) {
-    var lcode = prelua() + '\n' + code + '\n' + postlua();
+    var lcode = prelua();
+    var offset = lcode.split('\n').length - 1;
+    lcode += '\n' + code + '\n' + postlua();
     if (cl) {
 	$('#output').text('');
 	$('#output').css('color',null);
@@ -148,8 +150,19 @@ function executeLua(code,cl) {
     try {
 	L.execute(lcode);
     } catch(e) {
+	var eline = e.toString().match(/:(\d+):/)[1];
+	var lines = lcode.split('\n');
+	var tab,m,n = 0;
+	for (var i = 0; i< eline; i++) {
+	    if (lines[i].search(/^--##/) != -1) {
+		m = lines[i].match(/^--## (.*)/);
+		tab = m[1];
+		n = i;
+	    }
+	}
+	var emsg = e.toString().replace(/.*:(\d+):\s*/, function(a,b) { return 'Tab: ' + tab + '\nLine: ' + (parseInt(b,10) - n - 2) + '\n' });
 	$('#output').css('color','red');
-	$('#output').text(e.toString());
+	$('#output').text(emsg);
     }
 }
 
@@ -179,7 +192,7 @@ function runCode() {
     tabs[ctab] = cm.getValue().trim() + '\n';
     $('.tabtitle').each(function(e) {
 	if (tabs[$(this).last().text()])
-	    code += '\ndo\n' + tabs[$(this).last().text()] + '\nend\n';
+	    code += '\n--## ' + $(this).last().text() + '\ndo\n' + tabs[$(this).last().text()] + '\nend\n';
     });
     executeLua(code,true);
 }
@@ -286,7 +299,7 @@ function addTab(e) {
     tab.children()[0].trigger('click');
 }
 
-function makeTab(t,b = false) {
+function makeTab(t,b) {
     var tab = $('<li>');
     var hdle = $('<span>');
     hdle.text("⇔");
@@ -499,8 +512,8 @@ recordTouch = (function() {
 
 function prelua() {
     var str =
-	luaClass() +
-	luaParameters() +
+	$('#lua_class').text() +
+	$('#lua_parameters').text() +
 	'do ' +
 	'stroke(255,255,255) ' +
 	'fill(0,0,0) ' +
@@ -565,157 +578,6 @@ function template() {
 	'\trect(20,20,100,100)\n' + 
 	'end\n'
     return str;
-}
-
-/*
-  
-  Copyright 2012 Two Lives Left Pty. Ltd.
-  
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-  
-  http://www.apache.org/licenses/LICENSE-2.0
-  
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-  
- Class.lua
- Compatible with Lua 5.1 (not 5.0).
-*/
-
-function luaClass() {
-    return 'function class(base)\n' +
-	'    local c = {}    -- a new class instance\n' +
-	'    if type(base) == \'table\' then\n' +
-	'        -- our new class is a shallow copy of the base class!\n' +
-	'        for i,v in pairs(base) do\n' +
-	'            c[i] = v\n' +
-	'        end\n' +
-	'        c._base = base\n' +
-	'    end\n' +
-	'\n' +
-	'    -- the class will be the metatable for all its objects,\n' +
-	'    -- and they will look up their methods in it.\n' +
-	'    c.__index = c\n' +
-	'\n' +
-	'    -- expose a constructor which can be called by <classname>(<args>)\n' +
-	'    local mt = {}\n' +
-	'    mt.__call = function(class_tbl, ...)\n' +
-	'        local obj = {}\n' +
-	'        setmetatable(obj,c)\n' +
-	'        if class_tbl.init then\n' +
-	'            class_tbl.init(obj,...)\n' +
-	'        else \n' +
-	'            -- make sure that any stuff from the base class is initialized!\n' +
-	'            if base and base.init then\n' +
-	'                base.init(obj, ...)\n' +
-	'            end\n' +
-	'        end\n' +
-	'        \n' +
-	'        return obj\n' +
-	'    end\n' +
-	'\n' +
-	'    c.is_a = function(self, klass)\n' +
-	'        local m = getmetatable(self)\n' +
-	'        while m do \n' +
-	'            if m == klass then return true end\n' +
-	'            m = m._base\n' +
-	'        end\n' +
-	'        return false\n' +
-	'    end\n' +
-	'\n' +
-	'    setmetatable(c, mt)\n' +
-	'    return c\n' +
-	'end\n';
-}
-
-function luaParameters() {
-    return '\n' +
-	'local __parameter = parameter\n' +
-	'parameter = {}\n' +
-	'function parameter.text(n,i,f)\n' +
-	'    local fn\n' +
-	'    if type(f) == "function" then\n' +
-	'       fn = function(a,b) f(b) end\n' +
-	'    end\n' +
-	'    __parameter.text(n,i,fn)\n' +
-	'end\n\n' +
-	'function parameter.watch(s)\n' +
-	'    local ufn = __parameter.watch(s)\n' +
-	'    local fn = function() ufn(loadstring("return " .. s )()) end\n' +
-	'    __parameter.watchfn(fn)\n' +
-	'end\n\n' +
-	'function parameter.colour(n,r,g,b,f)\n' +
-	'    local c\n' +
-	'    if not r or type(r) == "function" then\n' +
-	'        c = colour()\n' +
-	'        f = r\n' +
-	'    elseif not g or type(g) == "function" then\n' +
-	'        c = colour(r)\n' +
-	'        f = g\n' +
-	'    else\n' +
-	'        c = colour(r,g,b)\n' +
-	'    end\n' +
-	'    local fn\n' +
-	'    if type(f) == "function" then\n' +
-	'       fn = function(a,b) f(b) end\n' +
-	'    end\n' +
-	'    __parameter.colour(n,c,fn)\n' +
-	'    end\n' +
-	'parameter.color = parameter.colour\n' +
-	'function parameter.number(n,a,b,i,f)\n' +
-	'    local fn\n' +
-	'    if not a or type(a) == "function" then\n' +
-	'        f = a\n' +
-	'        a = 0\n' +
-	'        b = 1\n' +
-	'        i = 0\n' +
-	'    elseif not i or type(i) == "function" then\n' +
-	'        f = i\n' +
-	'        i = a\n' +
-	'    end\n' +
-	'    if type(f) == "function" then\n' +
-	'       fn = function(a,b) f(b) end\n' +
-	'    end\n' +
-	'    __parameter.number(n,a,b,i,.001,fn)\n' +
-	'end\n\n' +
-	'function parameter.integer(n,a,b,i,f)\n' +
-	'    local fn\n' +
-	'    if not a or type(a) == "function" then\n' +
-	'        f = a\n' +
-	'        a = 0\n' +
-	'        b = 1\n' +
-	'        i = 0\n' +
-	'    elseif not i or type(i) == "function" then\n' +
-	'        f = i\n' +
-	'        i = a\n' +
-	'    end\n' +
-	'    if type(f) == "function" then\n' +
-	'       fn = function(a,b) f(b) end\n' +
-	'    end\n' +
-	'    __parameter.number(n,a,b,i,1,fn)\n' +
-	'end\n\n' +
-	'function parameter.action(n,f)\n' +
-	'    __parameter.action(n,f)\n' +
-	'end\n\n' +
-	'function parameter.boolean(n,i,f)\n' +
-	'    local fn\n' +
-	'    if not f and type(i) == "function" then\n' +
-	'        f = i\n' +
-	'        i = true\n' +
-	'    end\n' +
-	'    if not i then\n' +
-	'        i = true\n' +
-	'    end\n' +
-	'    if type(f) == "function" then\n' +
-	'       fn = function(a,b) f(b) end\n' +
-	'    end\n' +
-	'    __parameter.bool(n,i,fn)\n' +
-	'end\n\n'
 }
 
 function Timer(callback, delay) {
@@ -1233,6 +1095,10 @@ LuaExt = {
 	}
     }
 }
+
+/*
+Userdata
+*/
 
 function Colour(r,g,b,a) {
     if (r instanceof String || typeof(r) === "string") {
