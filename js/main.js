@@ -11,11 +11,6 @@ var Module = {
 }
 
 /*
-This holds our code for each tab
- */
-var tabs = {};
-
-/*
 Initialise code editor and lua interpreter
 */
 function init() {
@@ -28,41 +23,23 @@ function init() {
 				     matchBrackets: true,
 				 }
 				);
-    cm.setValue($('#lua_template').text());
     var cvs = $('#cvs')[0];
     var ctx = cvs.getContext('2d');
     var lc = new LuaCanvas(ctx,$('#output'),$('#parameters'));
+    var tabs = new Tabs($('#tabs'),cm);
+    cm.setValue($('#lua_template').text().trim());
 
     $('#execute').click(function() {runCode(lc,cm)});
     $('#edit').click(function() { startEditing(lc) });
     $('#pause').click(lc.pauseCode);
-    $('#restart').click(function() {restartCode(lc,cm)});
-    $('#save').click(function(e) {saveCode(e,cm)});
-    $('#load').change(function(e) {loadCode(e,cm)});
-    $('#theme').change(function() {selectTheme(cm) });
-    $('.handle').click(function(e) {switchTab(e,cm) });
-    $('#add').click(addTab);
-    $('.tabtitle').change(renameTab);
-    $('.tabtitle').on('focus', startRename).on('blur keyup paste input', renameTab);
-
-    $('#tabs').sortable({
-	axis: "x",
-	distance: 5,
-	handle: ".handle",
-	cancel: ".control",
-	stop: function(e, ui) {
-	    if (ui.position.left - $('#add').position().left > 0) {
-		if (ui.item.attr('id') == 'Main') {
-		    $('#tabs').sortable("cancel");
-		} else {
-		    if (ui.item.children().last().hasClass('current')) {
-			$('#Main').children().first().trigger('click');
-		    }
-		    ui.item.remove();
-		}
-	    }
-	},
+    $('#restart').click(function() {
+	$('#pause').text('Pause');
+	lc.restartCode();
     });
+    $('#save').click(function(e) {tabs.saveCode(e,cm)});
+    $('#load').change(function(e) {tabs.loadCode(e,cm)});
+    $('#theme').change(function() {selectTheme(cm) });
+
     startEditing(lc);
     var theme = localStorage.getItem('theme');
     if (theme != '') {
@@ -139,152 +116,186 @@ function runCode(lc,cm) {
     lc.executeLua(code,true);
 }
 
-/*
-Restart the code from fresh
-*/
-function restartCode(lc,cm) {
-    lc.stopLua();
-    $('#pause').text('Pause');
-    var code = '';
-    var ctab = $('.current').text().trim();
-    tabs[ctab] = cm.getValue().trim() + '\n';
-    $('.tabtitle').each(function(e) {
-	if (tabs[$(this).last().text()])
-	    code += '\ndo\n' + tabs[$(this).last().text()] + '\nend\n';
-    });
-    lc.executeLua(code,true);
-}
+function Tabs(t,cm) {
+    var self = this;
+    var tabs = {};
+    var tabol = t;
+    var cm = cm;
 
-/*
-Save the code to a file
-*/
-function saveCode(e,cm) {
-    var code = '';
-    var ctab = $('.current').text().trim();
-    tabs[ctab] = cm.getValue().trim() + '\n';
-    $('.tabtitle').each(function(e) {
-	if (tabs[$(this).last().text()])
-	    code += '\n--## ' + $(this).last().text() + '\n\n' + tabs[$(this).last().text()] + '\n\n';
-    });
-    var title = $('#title').text().trim();
-    var blob = new Blob([code], {'type':'text/plain'});
-    var a = $(e.currentTarget);
-    a.attr('href', window.URL.createObjectURL(blob));
-    a.attr('download', title + '.lua');
-}
+    var add = $('<li>');
+    add.addClass('tabstyle');
+    add.addClass('control');
+    var addlink = $('<a>');
+    addlink.addClass('nolink');
+    addlink.attr('href','#');
+    addlink.attr('id','add');
+    addlink.text('+');
+    add.append(addlink);
+    tabol.append(add);
 
-/*
-Load the code from a file
-*/
-function loadCode(f,cm) {
-    var reader = new FileReader();
+    $(document).on('keypress', '.tabtitle', function(e){
+	return e.which != 13; 
+    }); 
 
-    reader.onload = function(e){
-	var code = e.target.result.split(/\n(--## [^\n]*)\n/);
-	var i = 0;
-	var match;
-	var tab;
-	var curr;
-	var first = true;
-	tabs = {};
-	$('.tab').remove();
-	while(i < code.length) {
-	    match = code[i].match(/^--## ([^\n]+)/);
-	    if (match !== null) {
-		tabs[match[1]] = code[++i].trim();
-		if (first || match[1] == "Main" ) {
-		    curr = true;
-		    cm.setValue(code[i].trim());
+    tabol.sortable({
+	axis: "x",
+	distance: 5,
+	handle: ".handle",
+	cancel: ".control",
+	stop: function(e, ui) {
+	    if (ui.position.left - add.position().left > 0) {
+		if (ui.item.attr('id') == 'Main') {
+		    tabol.sortable("cancel");
 		} else {
-		    curr = false;
+		    if (ui.item.children().last().hasClass('current')) {
+			$('#Main').children().first().trigger('click');
+		    }
+		    ui.item.remove();
 		}
-		tab = makeTab(match[1],curr);
-		tab.insertBefore($("#add").parent());
-		first = false;
 	    }
-	    i++;
-	}
-	$('current').parent().attr('id','Main');
-    }
-    var t = f.target.files[0].name;
-    t = t.replace(/\.[^/.]+$/, "");
-    $('#title').text(t);
-    reader.readAsText(f.target.files[0]);
-}
+	},
+    });
 
-/*
-Add a tab to the list
-*/
-function addTab(e) {
-    var tab = makeTab('New Tab');
-    tab.insertBefore($(e.target).parent());
-    tab.children()[0].trigger('click');
-}
-
-/*
-Auxiliary for making a tab
-*/
-function makeTab(t,b) {
-    var tab = $('<li>');
-    var hdle = $('<span>');
-    hdle.text("⇔");
-    hdle.addClass("handle");
-    hdle.click(switchTab);
-    tab.append(hdle);
-    var title = $('<span>');
-    title.text(t);
-    title.attr('contenteditable','true');
-    title.addClass('tabtitle');
-    title.on('focus', startRename).on('blur keyup paste input', renameTab);
-    if (b) {
-	$('current').removeClass('current');
-	title.addClass('current');
-    }
-    tab.append(title);
-    tab.addClass('tab');
-    tab.addClass('tabstyle');
-    return tab;
-}
-
-/*
-When renaming a tab, we need to save the old name first
-*/
-function startRename() {
-    var $this = $(this);
-    $this.data('before', $this.html());
-    return $this;
-}
-
-/*
-Rename a tab, transfering its contents in the tabs object
-*/
-function renameTab() {
-    var $this = $(this);
-    if ($this.data('before') !== $this.html()) {
-	tabs[$this.html()] = tabs[$this.data('before')];
-	tabs[$this.data('before')] = '';
-    }
-    return $this;
-}
-
-/*
-Switch tab
-*/
-function switchTab(e,cm) {
-    var ctab = $('.current').text().trim();
-    var ntab = $(e.target).next().text().trim();
-    if (ctab != ntab) {
+    /*
+      Save the code to a file
+    */
+    this.saveCode = function(e) {
+	var code = '';
+	var ctab = $('.current').text().trim();
 	tabs[ctab] = cm.getValue().trim() + '\n';
-	if (tabs[ntab]) {
-	    cm.setValue(tabs[ntab]);
-	} else {
-	    cm.setValue('');
-	}
-	$('.current').removeClass('current');
-	$(e.target).next().addClass('current');
+	$('.tabtitle').each(function(e) {
+	    if (tabs[$(this).last().text()])
+		code += '\n--## ' + $(this).last().text() + '\n\n' + tabs[$(this).last().text()] + '\n\n';
+	});
+	var title = $('#title').text().trim();
+	var blob = new Blob([code], {'type':'text/plain'});
+	var a = $(e.currentTarget);
+	a.attr('href', window.URL.createObjectURL(blob));
+	a.attr('download', title + '.lua');
     }
-}
+    
+    /*
+      Load the code from a file
+    */
+    this.loadCode = function(f) {
+	var reader = new FileReader();
 
+	reader.onload = function(e){
+	    var code = e.target.result.split(/\n(--## [^\n]*)\n/);
+	    var i = 0;
+	    var match;
+	    var tab;
+	    var curr;
+	    var first = true;
+	    tabs = {};
+	    $('.tab').remove();
+	    while(i < code.length) {
+		match = code[i].match(/^--## ([^\n]+)/);
+		if (match !== null) {
+		    tabs[match[1]] = code[++i].trim();
+		    if (first || match[1] == "Main" ) {
+			curr = true;
+			cm.setValue(code[i].trim());
+		    } else {
+			curr = false;
+		    }
+		    tab = makeTab(match[1],curr);
+		    tab.insertBefore($("#add").parent());
+		    first = false;
+		}
+		i++;
+	    }
+	    $('current').parent().attr('id','Main');
+	}
+	var t = f.target.files[0].name;
+	var re = new RegExp('\\.[^/.]+$');
+	t = t.replace(re, "");
+	$('#title').text(t);
+	reader.readAsText(f.target.files[0]);
+    }
+
+    /*
+      Add a tab to the list
+    */
+    this.addTab = function(e,t,id) {
+	if (typeof(t) === 'undefined')
+	    t = 'New Tab';
+	var tab = self.makeTab(t,false,id);
+	tab.insertBefore(add);
+	$(tab.children()[0]).trigger('click');
+    }
+
+    /*
+      Auxiliary for making a tab
+    */
+    this.makeTab = function(t,b,id) {
+	var tab = $('<li>');
+	var hdle = $('<span>');
+	hdle.text("⇔");
+	hdle.addClass("handle");
+	hdle.click(self.switchTab);
+	tab.append(hdle);
+	var title = $('<span>');
+	title.text(t);
+	title.attr('contenteditable','true');
+	title.addClass('tabtitle');
+	title.on('focus', self.startRename).on('blur keyup paste input', self.renameTab);
+	if (b) {
+	    $('current').removeClass('current');
+	    title.addClass('current');
+	}
+	if (id) {
+	    tab.attr('id',id);
+	}
+	tab.append(title);
+	tab.addClass('tab');
+	tab.addClass('tabstyle');
+	return tab;
+    }
+
+    /*
+      When renaming a tab, we need to save the old name first
+    */
+    this.startRename = function() {
+	var $this = $(this);
+	$this.data('before', $this.html());
+	return $this;
+    }
+
+    /*
+      Rename a tab, transfering its contents in the tabs object
+    */
+    this.renameTab = function() {
+	var $this = $(this);
+	if ($this.data('before') !== $this.html()) {
+	    tabs[$this.html()] = tabs[$this.data('before')];
+	    tabs[$this.data('before')] = '';
+	}
+	return $this;
+    }
+
+    /*
+      Switch tab
+    */
+    this.switchTab = function(e) {
+	var ctab = $('.current').text().trim();
+	var ntab = $(e.target).next().text().trim();
+	if (ctab != ntab) {
+	    tabs[ctab] = cm.getValue().trim() + '\n';
+	    if (tabs[ntab]) {
+		cm.setValue(tabs[ntab]);
+	    } else {
+		cm.setValue('');
+	    }
+	    $('.current').removeClass('current');
+	    $(e.target).next().addClass('current');
+	}
+    }
+
+    addlink.click(self.addTab);
+    this.addTab(false,'Main','Main');
+    return this;
+}
 /*
 This is our wrapper around the lua interpreter
 */
@@ -299,6 +310,7 @@ function LuaCanvas(c,o,p) {
     var LuaG; // Lua's _G table
     var sTime; // time at which the script started
     var inTouch; // used for handling touches
+    var code; // saves the current code in case we restart
     var blendmodes = { // all the various blend modes
 	sourceOver: 'source-over',
 	sourceIn: 'source-in',
@@ -331,7 +343,8 @@ function LuaCanvas(c,o,p) {
     /*
       This does the actual execution
      */
-    this.executeLua = function(code,cl) {
+    this.executeLua = function(c,cl) {
+	code = c;
 	var lcode = self.prelua();
 	var offset = lcode.split('\n').length - 1;
 	lcode += '\n' + code + '\n' + self.postlua();
@@ -367,6 +380,14 @@ function LuaCanvas(c,o,p) {
 	    output.css('color','red');
 	    output.text(emsg);
 	}
+    }
+
+    /*
+      Restart the code from fresh
+    */
+    restartCode = function() {
+	self.stopLua();
+	self.executeLua(code,true);
     }
     
     /*
