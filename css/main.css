@@ -30,7 +30,7 @@ body {
     height: 50%;
     border-bottom: 3px solid #888;
     font-size: small;
-    overflow: scroll;
+    overflow: auto;
 }
 
 #paramdiv input {
@@ -39,7 +39,7 @@ body {
 
 #outdiv {
     height: calc(50% - 5px);
-    overflow: scroll;
+    overflow: auto;
 }
 
 #output {

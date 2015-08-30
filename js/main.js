@@ -39,13 +39,10 @@ function init() {
     $('#restart').click(function() {restartCode(lc,cm)});
     $('#save').click(function(e) {saveCode(e,cm)});
     $('#load').change(function(e) {loadCode(e,cm)});
-    $('#add').click(addTab);
     $('#theme').change(function() {selectTheme(cm) });
     $('.handle').click(function(e) {switchTab(e,cm) });
+    $('#add').click(addTab);
     $('.tabtitle').change(renameTab);
-    $('#cvs').mousedown(lc.startTouch);
-    $('#cvs').mouseup(lc.stopTouch);
-    $('#cvs').mouseleave(lc.stopTouch);
     $('.tabtitle').on('focus', startRename).on('blur keyup paste input', renameTab);
 
     $('#tabs').sortable({
@@ -297,7 +294,7 @@ function LuaCanvas(c,o,p) {
     var output = o; // output pane
     var params = p; // parameters pane
     var luaDraw; // the draw cycle timer
-    var LuaState; // matrix and style and similar
+    var LuaState; // transformation and style and similar
     var LuaExt; // our extensions
     var LuaG; // Lua's _G table
     var sTime; // time at which the script started
@@ -330,7 +327,7 @@ function LuaCanvas(c,o,p) {
 	color: 'color',
 	luminosity: 'luminosity'
     };
-    
+
     /*
       This does the actual execution
      */
@@ -398,12 +395,12 @@ function LuaCanvas(c,o,p) {
     }
     
     /*
-      Returns a vanilla state (matrix,styles,etc)
+      Returns a vanilla state (transformation,styles,etc)
      */
     this.getLuaState = function() {
 	return {
-	    matrix: [
-		new Matrix(),
+	    transformation: [
+		new Transformation(),
 	    ],
 	    style: [
 		{
@@ -463,7 +460,7 @@ this.applyStyle = function(s) {
 }
 
 this.applyTransform = function(x,y) {
-    var p = LuaState.matrix[0].applyTransform(x,y);
+    var p = LuaState.transformation[0].applyTransform(x,y);
     var ch = ctx.canvas.height;
     p.y *= -1;
     p.y += ch;
@@ -471,7 +468,7 @@ this.applyTransform = function(x,y) {
 }
 
 this.applyTransformNoShift = function(x,y) {
-    var p = LuaState.matrix[0].applyTransformNoShift(x,y);
+    var p = LuaState.transformation[0].applyTransformNoShift(x,y);
     p.y *= -1;
     return p;
 }
@@ -486,7 +483,7 @@ this.applyTransformNoShift = function(x,y) {
     this.startTouch = function(e) {
 	self.recordTouch(e);
 	inTouch = true;
-	$(ctx.canvas).mousemove(recordTouch);
+	$(ctx.canvas).mousemove(self.recordTouch);
     }
 
     this.stopTouch = function(e) {
@@ -495,6 +492,10 @@ this.applyTransformNoShift = function(x,y) {
 	$(ctx.canvas).off('mousemove');
 	inTouch = false;
     }
+
+$(ctx.canvas).mousedown(self.startTouch);
+    $(ctx.canvas).mouseup(self.stopTouch);
+    $(ctx.canvas).mouseleave(self.stopTouch);
 
     this.recordTouch = (function() {
 	var prevTouch;
@@ -563,7 +564,7 @@ this.applyTransformNoShift = function(x,y) {
 	    time = t;
 	    luaDraw = new Timer(
 		function() {
-		    LuaState.matrix = [new Matrix()];
+		    LuaState.transformation = [new Transformation()];
 		    draw();
 		    LuaState.touches.forEach(touched);
 		    LuaState.touches = [];
@@ -835,43 +836,43 @@ LuaExt = {
 	    })
 	    applyStyle(LuaState.style[0]);
 	},
-	pushMatrix: function() {
-	    LuaState.matrix.unshift(new Matrix(LuaState.matrix[0]));
+	pushTransformation: function() {
+	    LuaState.transformation.unshift(new Transformation(LuaState.transformation[0]));
 	},
-	popMatrix: function() {
-	    LuaState.matrix.shift();
+	popTransformation: function() {
+	    LuaState.transformation.shift();
 	},
-	resetMatrix: function() {
-	    LuaState.matrix[0] = new Matrix();
+	resetTransformation: function() {
+	    LuaState.transformation[0] = new Transformation();
 	},
 	translate: function(y) {
 	    var x = this;
-	    LuaState.matrix[0].translate(x,y);
+	    LuaState.transformation[0].translate(x,y);
 	},
 	scale: function(b) {
 	    var a = this;
-	    LuaState.matrix[0].scale(a,b);
+	    LuaState.transformation[0].scale(a,b);
 	},
 	xsheer: function() {
 	    var a = this;
-	    LuaState.matrix[0].xsheer(a);
+	    LuaState.transformation[0].xsheer(a);
 	},
 	ysheer: function() {
 	    var a = this;
-	    LuaState.matrix[0].ysheer(a);
+	    LuaState.transformation[0].ysheer(a);
 	},
 	rotate: function(x,y) {
 	    var ang = this;
-	    LuaState.matrix[0].rotate(ang,x,y);
+	    LuaState.transformation[0].rotate(ang,x,y);
 	},
-	applyMatrix: function() {
-	    LuaState.matrix[0].applyMatrix(this);
+	applyTransformation: function() {
+	    LuaState.transformation[0].applyTransformation(this);
 	},
-	modelMatrix: function() {
+	modelTransformation: function() {
 	    if (typeof(this) !== "undefined") {
-		 LuaState.matrix[0] = new Matrix(this);
+		 LuaState.transformation[0] = new Transformation(this);
 	    } else {
-		return LuaState.matrix[0];
+		return LuaState.transformation[0];
 	    }
 	},
 	clearState: function() {
@@ -885,9 +886,9 @@ LuaExt = {
 	    var r = this;
 	    return new Colour(r,g,b,a);
 	},
-	matrix: function(b,c,d,e,f) {
+    transformation: function(b,c,d,e,f) {
 	    var a = this;
-	    return new Matrix(a,b,c,d,e,f);
+	    return new Transformation(a,b,c,d,e,f);
 	},
     vec2: function(y) {
 	var x = this;
@@ -1155,9 +1156,9 @@ function Colour(r,g,b,a) {
     return this;
 }
 
-function Matrix(a,b,c,d,e,f) {
+function Transformation(a,b,c,d,e,f) {
     if (typeof(a) !== 'undefined') {
-	if (a instanceof Matrix || typeof(a) === 'array') {
+	if (a instanceof Transformation || typeof(a) === 'array') {
 	    for (var i = 0; i < 6; i++) {
 		this[i] = a[i];
 	    }
@@ -1205,7 +1206,7 @@ function Matrix(a,b,c,d,e,f) {
 	return new Vec2(xx, yy)
     }
 
-    this.applyMatrix = function(mr) {
+    this.applyTransformation = function(mr) {
 	var nm = [];
 	nm[0] = this[0] * mr[0] + this[2] * mr[1];
 	nm[1] = this[1] * mr[0] + this[3] * mr[1];
@@ -1257,7 +1258,7 @@ function Matrix(a,b,c,d,e,f) {
 	ang *= Math.PI/180;
 	var cs = Math.cos(ang);
 	var sn = Math.sin(ang);
-	this.applyMatrix([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+	this.applyTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
     }
     
     return this;
