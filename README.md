@@ -33,7 +33,7 @@ This project uses the following `javascript` libraries:
 3. [jQuery](https://jquery.com/) to make life a little easier inside the code.
 4. [jQuery-ui](https://jqueryui.com/) to make life a little easier outside the code.
 
-Note: this project does not contain the dependencies.  For `jquery-ui`, you need the `sortable` interaction and `slider` widget.  For Codemirror, you need the `closebrackets.js` and `matchbrackets.js` add-ons and all the themes.  Look at the `head` section of `index.html` to see where to put the files.
+(These are all installed with the project to make it self-contained.)
 
 ## Acknowledgements
 
