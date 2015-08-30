@@ -27,7 +27,7 @@ body {
 }
 
 #paramdiv {
-    height: 50%;
+    height: calc(50% - 5px);
     border-bottom: 3px solid #888;
     font-size: small;
     overflow: auto;
@@ -38,7 +38,7 @@ body {
 }
 
 #outdiv {
-    height: calc(50% - 5px);
+    height: 50%;
     overflow: auto;
 }
 
@@ -103,6 +103,12 @@ body {
 #codediv {
     border-style: inset;
     border-width: 2px;
+}
+
+.buttons {
+    clear: both;
+    padding-top: 14px;
+    padding-bottom: 10px;
 }
 
 .link_button {
@@ -210,4 +216,9 @@ body {
 
 .lua_code {
     display: none;
+}
+
+.graphicsmode {
+    float: right;
+    width: max-content;
 }

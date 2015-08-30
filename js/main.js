@@ -27,18 +27,33 @@ function init() {
     var ctx = cvs.getContext('2d');
     var lc = new LuaCanvas(ctx,$('#output'),$('#parameters'));
     var tabs = new Tabs($('#tabs'),cm);
-    cm.setValue($('#lua_template').text().trim());
+    if ($('#graphics').is(':checked')) {
+	cm.setValue($('#lua_template').text().trim());
+    }
 
-    $('#execute').click(function() {runCode(lc,cm)});
-    $('#edit').click(function() { startEditing(lc) });
+    $('#panel').data('origWidth',$('#panel').width());
+
+    $('#execute').click(function() {
+	var g = $('#graphics').is(':checked');
+	runCode(lc,cm,g);
+	return false;
+    });
+    $('#edit').click(function() { 
+	startEditing(lc); 
+	return false;
+    });
     $('#pause').click(lc.pauseCode);
     $('#restart').click(function() {
 	$('#pause').text('Pause');
 	lc.restartCode();
+	return false;
     });
     $('#save').click(function(e) {tabs.saveCode(e,cm)});
     $('#load').change(function(e) {tabs.loadCode(e,cm)});
-    $('#theme').change(function() {selectTheme(cm) });
+    $('#theme').change(function() {
+	selectTheme(cm);
+	return false;
+    });
 
     startEditing(lc);
     var theme = localStorage.getItem('theme');
@@ -69,6 +84,7 @@ function startEditing(lc) {
     $('#editButtons').css('display','block');
     $('#editor').css('display','block');
     setEditorSize();
+    return false;
 }
 
 /*
@@ -86,26 +102,41 @@ function setEditorSize() {
 /*
 Set the canvas to be as big as possible on the screen.
 */
-function setExecuteSize() {
-    var w = $('#container').width();
-    w -= $('#panel').outerWidth() + 30;
-    $('#canvas').height($(window).height());
+function setExecuteSize(g) {
+    $('#panel').height($(window).height());
     var h = 2*$(window).height() - $(document).height();
-    $('#canvas').height(h);
     $('#panel').height(h);
-    $('#cvs').attr('width',w);
-    $('#cvs').attr('height',h - 6); // not sure why 6 here
+    if (g) {
+	$('#panel').width($('#panel').data('origWidth'));
+	$('#canvas').css('display','block');
+	var w = $('#container').width();
+	w -= $('#panel').outerWidth() + 30;
+	$('#canvas').height(h);
+	$('#cvs').attr('width',w);
+	$('#cvs').attr('height',h - 6); // not sure why 6 here
+	$('#restart').css('display','inline');
+	$('#pause').css('display','inline');
+	$('#paramdiv').css('display','block');
+	$('#outdiv').css('height','50%');
+    } else {
+	$('#canvas').css('display','none');
+	$('#panel').width($('#container').width() - 40);
+	$('#restart').css('display','none');
+	$('#pause').css('display','none');
+	$('#paramdiv').css('display','none');
+	$('#outdiv').css('height','100%');
+    }
 }
 
 /*
 Get the code from the editor and pass it to the interpreter
 */
-function runCode(lc,cm) {
+function runCode(lc,cm,g) {
     $('#editor').css('display','none');
     $('#editButtons').css('display','none');
     $('#runButtons').css('display','block');
     $('#run').css('display','block');
-    setExecuteSize();
+    setExecuteSize(g);
     var code = '';
     var ctab = $('.current').text().trim();
     tabs[ctab] = cm.getValue().trim() + '\n';
@@ -113,7 +144,8 @@ function runCode(lc,cm) {
 	if (tabs[$(this).last().text()])
 	    code += '\n--## ' + $(this).last().text() + '\ndo\n' + tabs[$(this).last().text()] + '\nend\n';
     });
-    lc.executeLua(code,true);
+    lc.executeLua(code,true,g);
+    return false;
 }
 
 function Tabs(t,cm) {
@@ -311,6 +343,7 @@ function LuaCanvas(c,o,p) {
     var sTime; // time at which the script started
     var inTouch; // used for handling touches
     var code; // saves the current code in case we restart
+    var graphics; // are we in graphics mode?
     var blendmodes = { // all the various blend modes
 	sourceOver: 'source-over',
 	sourceIn: 'source-in',
@@ -343,11 +376,12 @@ function LuaCanvas(c,o,p) {
     /*
       This does the actual execution
      */
-    this.executeLua = function(c,cl) {
+    this.executeLua = function(c,cl,g) {
 	code = c;
-	var lcode = self.prelua();
+	graphics = g;
+	var lcode = self.prelua(g);
 	var offset = lcode.split('\n').length - 1;
-	lcode += '\n' + code + '\n' + self.postlua();
+	lcode += '\n' + code + '\n' + self.postlua(g);
 	if (cl) {
 	    output.text('');
 	    output.css('color',null);
@@ -355,8 +389,7 @@ function LuaCanvas(c,o,p) {
 	}
 	var L = new Lua.State;
 	LuaG = L._G;
-	self.initialiseLua();
-	self.applyStyle(LuaState.defaultStyle);
+	self.initialiseLua(g);
 	sTime = Date.now();
 	try {
 	    L.execute(lcode);
@@ -387,7 +420,7 @@ function LuaCanvas(c,o,p) {
     */
     restartCode = function() {
 	self.stopLua();
-	self.executeLua(code,true);
+	self.executeLua(code,true,graphics);
     }
     
     /*
@@ -504,19 +537,18 @@ this.applyTransformNoShift = function(x,y) {
     this.startTouch = function(e) {
 	self.recordTouch(e);
 	inTouch = true;
-	$(ctx.canvas).mousemove(self.recordTouch);
+	$(ctx.canvas).on('mousemove touchmove',self.recordTouch);
     }
 
     this.stopTouch = function(e) {
 	if (inTouch)
 	    self.recordTouch(e);
-	$(ctx.canvas).off('mousemove');
+	$(ctx.canvas).off('mousemove touchmove');
 	inTouch = false;
     }
 
-$(ctx.canvas).mousedown(self.startTouch);
-    $(ctx.canvas).mouseup(self.stopTouch);
-    $(ctx.canvas).mouseleave(self.stopTouch);
+    $(ctx.canvas).on('mousedown touchstart',self.startTouch);
+    $(ctx.canvas).on('mouseleave mouseup touchend touchcancel',self.stopTouch);
 
     this.recordTouch = (function() {
 	var prevTouch;
@@ -525,15 +557,15 @@ $(ctx.canvas).mousedown(self.startTouch);
 	    var px,py,dx,dy,x,y;
 	    x = Math.floor(e.pageX - $(ctx.canvas).offset().left);
 	    y = $(ctx.canvas).offset().top + parseInt($(ctx.canvas).attr('height'),10) - e.pageY;
-	    if (e.type == 'mousedown') {
+	    if (e.type == 'mousedown' || e.type == 'touchstart') {
 		s = 'BEGAN';
-	    } else if (e.type == 'mousemove') {
+	    } else if (e.type == 'mousemove' || e.type == 'touchmove') {
 		s = 'MOVING';
 		px = prevTouch.x;
 		py = prevTouch.y;
 		dx = x - px;
 		dy = x - py;
-	    } else if (e.type == 'mouseup' || e.type == 'mouseleave') {
+	    } else if (e.type == 'mouseup' || e.type == 'mouseleave' || e.type == 'touchend' || e.type == 'touchcancel') {
 		s = 'ENDED';
 		px = prevTouch.x;
 		py = prevTouch.y;
@@ -555,20 +587,27 @@ $(ctx.canvas).mousedown(self.startTouch);
 	}
     })();
 
-    this.prelua = function() {
-	return $('#lua_class').text() +
-	    $('#lua_parameters').text() +
-	    'do ' +
-	    'stroke(255,255,255) ' +
-	    'fill(0,0,0) ' +
-	    'do ';
+    this.prelua = function(g) {
+	var str = $('#lua_class').text() + ' ';
+	if (g) {
+	    str += $('#lua_parameters').text() +
+		' do ' +
+		'stroke(255,255,255) ' +
+		'fill(0,0,0) '
+	}
+	str += 'do ';
+	return str;
     }
 
-    this.postlua = function() {
-	return 'end ' +
+    this.postlua = function(g) {
+	var str = ' end ';
+	if (g) {
+	    str +=
 	    'setup() ' +
 	    'do initCycle(draw,function (...) touched(select(2,...)) end) end ' +
 	    'end';
+	}
+	return str;
     }
 
     this.initCycle = (function () {
@@ -607,36 +646,39 @@ $(ctx.canvas).mousedown(self.startTouch);
 	
     })();
 
-this.initialiseLua = function() {
-    var g = LuaG;
-	params.empty()
-	g.set('WIDTH',$(ctx.canvas).attr('width'));
-	g.set('HEIGHT',$(ctx.canvas).attr('height'));
-	g.set('CORNER',0);
-	g.set('CORNERS',1);
-	g.set('CENTER',2);
-	g.set('CENTRE',2);
-	g.set('RADIUS',3);
-	g.set('ROUND',0);
-	g.set('SQUARE',1);
-	g.set('PROJECT',2);
-	Object.keys(LuaExt).forEach(function(v,i,a) {
-	    g.set(v, LuaExt[v]);
-	})
-	g.set('blendmodes',blendmodes);
-	g.set('setup', function() {});
-	g.set('draw', function() {});
-	g.set('touched', function() {});
+    this.initialiseLua = function(gr) {
+	var g = LuaG;
+	params.empty();
+	if (gr) {
+	    g.set('WIDTH',$(ctx.canvas).attr('width'));
+	    g.set('HEIGHT',$(ctx.canvas).attr('height'));
+	    g.set('CORNER',0);
+	    g.set('CORNERS',1);
+	    g.set('CENTER',2);
+	    g.set('CENTRE',2);
+	    g.set('RADIUS',3);
+	    g.set('ROUND',0);
+	    g.set('SQUARE',1);
+	    g.set('PROJECT',2);
+	    Object.keys(LuaExt).forEach(function(v,i,a) {
+		g.set(v, LuaExt[v]);
+	    })
+	    g.set('blendmodes',blendmodes);
+	    g.set('setup', function() {});
+	    g.set('draw', function() {});
+	    g.set('touched', function() {});
+	    self.applyStyle(LuaState.defaultStyle);
+	}
     }
 
-/*
-  First argument is passed as 'this'.
-*/
-LuaExt = {
-    initCycle: function(t) {
-	var d = this;
-	self.initCycle(d,t);
-    },
+    /*
+      First argument is passed as 'this'.
+    */
+    LuaExt = {
+	initCycle: function(t) {
+	    var d = this;
+	    self.initCycle(d,t);
+	},
 	rect: function(y,w,h) {
 	    var x = this;
 	    if (LuaState.style[0].rectMode == 1) {
@@ -891,7 +933,7 @@ LuaExt = {
 	},
 	modelTransformation: function() {
 	    if (typeof(this) !== "undefined") {
-		 LuaState.transformation[0] = new Transformation(this);
+		LuaState.transformation[0] = new Transformation(this);
 	    } else {
 		return LuaState.transformation[0];
 	    }
@@ -907,17 +949,17 @@ LuaExt = {
 	    var r = this;
 	    return new Colour(r,g,b,a);
 	},
-    transformation: function(b,c,d,e,f) {
+	transformation: function(b,c,d,e,f) {
 	    var a = this;
 	    return new Transformation(a,b,c,d,e,f);
 	},
-    vec2: function(y) {
-	var x = this;
-	return new Vec2(x,y);
-    },
-    log: function() {
-	console.log(this);
-    },
+	vec2: function(y) {
+	    var x = this;
+	    return new Vec2(x,y);
+	},
+	log: function() {
+	    console.log(this);
+	},
 	parameter: {
 	    text: function(i,f) {
 		var name = this;
@@ -938,10 +980,12 @@ LuaExt = {
 		    cfn = function(e) {
 			LuaG.set(name,$(e.target).val());
 			f($(e.target).val());
+			return false;
 		    }
 		} else {
 		    cfn = function(e) {
 			LuaG.set(name,$(e.target).val());
+			return false;
 		    }
 		}
 		tfield.change(cfn);
@@ -955,11 +999,13 @@ LuaExt = {
 		var sfn,cfn;
 		cfn = function(e,u) {
 		    LuaG.set(name,u.value);
+		    return false;
 		}
 		if (typeof(f) === "function") {
 		    sfn = function(e,u) {
 			LuaG.set(name,u.value);
 			f(u.value);
+			return false;
 		    }
 		}
 		slider.slider({
@@ -1013,10 +1059,12 @@ LuaExt = {
 		    cfn = function(e) {
 			LuaG.set(c,new Colour($(e.target).val()));
 	 		f(new Colour($(e.target).val()));
+			return false;
 		    }
 		} else {
 		    cfn = function(e) {
 			LuaG.set(c,new Colour($(e.target).val()));
+			return false;
 		    }
 		}
 		tfield.change(cfn);
@@ -1033,7 +1081,7 @@ LuaExt = {
 		tfield.addClass('action');
 		tfield.attr('type','button');
 		tfield.val(name);
-		tfield.click(f);
+		tfield.click(function() {f(); return false;});
 		params.append(tfield);
 	    },
 	    bool: function(i,f) {
@@ -1066,10 +1114,12 @@ LuaExt = {
 		    cfn = function(e) {
 			LuaG.set(name,$(e.target).is(':checked'));
 			f($(e.target).is(':checked'));
+			return false;
 		    }
 		} else {
 		    cfn = function(e) {
 			LuaG.set(name,$(e.target).is(':checked'));
+			return false;
 		    }
 		}
 		tfield.change(cfn);
@@ -1089,7 +1139,7 @@ LuaExt = {
     }
 }
 /*
-Userdata
+  Userdata
 */
 
 function Colour(r,g,b,a) {
@@ -1338,7 +1388,7 @@ function Vec2(a,b) {
 }
 
 /*
-Utilities
+  Utilities
 */
 
 function Timer(callback, delay) {
@@ -1363,7 +1413,7 @@ function Timer(callback, delay) {
     this.stop = function() {
 	window.clearTimeout(timerId);
     }
-   
+    
     this.resume();
 }
 

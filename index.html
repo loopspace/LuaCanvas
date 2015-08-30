@@ -129,23 +129,26 @@
 	  <canvas id="cvs"></canvas>
 	</div>
       </div>
-      <p id="buttons">
-	<div id="editButtons">
-	  <a href="#" id="execute" class="link_button">Execute</a>
-	  <a href="#" id="save" class="link_button">Save</a>
-	  <form class="file_select">
-	    <div class="fileUpload link_button">
-	      <span>Load</span>
-	      <input type="file" class="upload" id="load">
-	    </div>
+      <div id="editButtons" class="buttons">
+	<div class="graphicsmode">
+	  <form id="graphicsform">
+	    <label for="graphics">Graphics mode: </label><input id="graphics" type="checkbox" checked="checked">
 	  </form>
 	</div>
-	<div id="runButtons">
-	  <a href="#" id="edit" class="link_button">Edit</a>
-	  <a href="#" id="restart" class="link_button">Restart</a>
-	  <a href="#" id="pause" class="link_button">Pause</a>
-	</div>
-      </p>
+	<a href="#" id="execute" class="link_button">Execute</a>
+	<a href="#" id="save" class="link_button">Save</a>
+	<form class="file_select">
+	  <div class="fileUpload link_button">
+	    <span>Load</span>
+	    <input type="file" class="upload" id="load">
+	  </div>
+	</form>
+      </div>
+      <div id="runButtons" class="buttons">
+	<a href="#" id="edit" class="link_button">Edit</a>
+	<a href="#" id="restart" class="link_button">Restart</a>
+	<a href="#" id="pause" class="link_button">Pause</a>
+      </div>
     </div>
     <div id="luacode" class="lua_code">
       <div id="lua_class_licence" class="lua_code">
