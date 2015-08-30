@@ -1,1 +1,11 @@
 *~
+css/codemirror.css
+css/jquery-ui.min.css
+css/theme/
+js/addon/
+js/codemirror.js
+js/jquery-1.11.3.min.js
+js/jquery-ui.min.js
+js/lua.js
+js/lua.vm.js
+
