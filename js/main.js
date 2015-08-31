@@ -418,7 +418,7 @@ function LuaCanvas(c,o,p) {
     /*
       Restart the code from fresh
     */
-    restartCode = function() {
+    this.restartCode = function() {
 	self.stopLua();
 	self.executeLua(code,true,graphics);
     }
@@ -498,34 +498,34 @@ function LuaCanvas(c,o,p) {
     /*
       Apply a style
     */
-this.applyStyle = function(s) {
-    ctx.lineWidth = s.strokeWidth;
-    ctx.fillStyle = s.fillColour.toCSS();
-    ctx.strokeStyle = s.strokeColour.toCSS();
-    ctx.font = s.fontSize + 'px ' + s.font;
-    if (s.lineCapMode == 0) {
-	ctx.lineCap = "round";
-    } else if (s.lineCapMode == 1) {
-	ctx.lineCap = "butt";
-    } else if (s.lineCapMode == 2) {
-	ctx.lineCap = "square";
+    this.applyStyle = function(s) {
+	ctx.lineWidth = s.strokeWidth;
+	ctx.fillStyle = s.fillColour.toCSS();
+	ctx.strokeStyle = s.strokeColour.toCSS();
+	ctx.font = s.fontSize + 'px ' + s.font;
+	if (s.lineCapMode == 0) {
+	    ctx.lineCap = "round";
+	} else if (s.lineCapMode == 1) {
+	    ctx.lineCap = "butt";
+	} else if (s.lineCapMode == 2) {
+	    ctx.lineCap = "square";
+	}
+	ctx.globalCompositeOperation = s.blendMode;
     }
-    ctx.globalCompositeOperation = s.blendMode;
-}
 
-this.applyTransform = function(x,y) {
-    var p = LuaState.transformation[0].applyTransform(x,y);
-    var ch = ctx.canvas.height;
-    p.y *= -1;
-    p.y += ch;
-    return p;
-}
+    this.applyTransformation = function(x,y) {
+	var p = LuaState.transformation[0].applyTransformation(x,y);
+	var ch = ctx.canvas.height;
+	p.y *= -1;
+	p.y += ch;
+	return p;
+    }
 
-this.applyTransformNoShift = function(x,y) {
-    var p = LuaState.transformation[0].applyTransformNoShift(x,y);
-    p.y *= -1;
-    return p;
-}
+    this.applyTransformationNoShift = function(x,y) {
+	var p = LuaState.transformation[0].applyTransformationNoShift(x,y);
+	p.y *= -1;
+	return p;
+    }
 
     this.clear = function() {
 	ctx.save();
@@ -693,9 +693,9 @@ this.applyTransformNoShift = function(x,y) {
 		w *= 2;
 		h *= 2;
 	    }
-	    var p = self.applyTransform(x,y);
-	    var r = self.applyTransformNoShift(w,0);
-	    var s = self.applyTransformNoShift(0,h);
+	    var p = self.applyTransformation(x,y);
+	    var r = self.applyTransformationNoShift(w,0);
+	    var s = self.applyTransformationNoShift(0,h);
 	    if (LuaState.style[0].fill) {
 		ctx.beginPath();
 		ctx.save();
@@ -782,8 +782,8 @@ this.applyTransformNoShift = function(x,y) {
 	line: function (y,xx,yy) {
 	    var x = this;
 	    if (LuaState.style[0].stroke) {
-		var p = self.applyTransform(x,y);
-		var pp = self.applyTransform(xx,yy);
+		var p = self.applyTransformation(x,y);
+		var pp = self.applyTransformation(xx,yy);
 		ctx.beginPath();
 		ctx.moveTo(p.x,p.y);
 		ctx.lineTo(pp.x,pp.y);
@@ -811,10 +811,10 @@ this.applyTransformNoShift = function(x,y) {
 		var tm = ctx.measureText(s);
 		x -= tm.width;
 	    }
-	    var p = self.applyTransform(x,y);
-	    var q = self.applyTransformNoShift(1,0);
+	    var p = self.applyTransformation(x,y);
+	    var q = self.applyTransformationNoShift(1,0);
 	    var ql = Math.sqrt(q.x*q.x + q.y*q.y);
-	    var r = self.applyTransformNoShift(0,-1);
+	    var r = self.applyTransformationNoShift(0,-1);
 	    var rl = Math.sqrt(r.x*r.x + r.y*r.y);
 	    ctx.save();
 	    ctx.beginPath();
@@ -854,9 +854,9 @@ this.applyTransformNoShift = function(x,y) {
 		w *= 2;
 		h *= 2;
 	    }
-	    var p = self.applyTransform(x,y);
-	    var r = self.applyTransformNoShift(w,0);
-	    var s = self.applyTransformNoShift(0,h);
+	    var p = self.applyTransformation(x,y);
+	    var r = self.applyTransformationNoShift(w,0);
+	    var s = self.applyTransformationNoShift(0,h);
 	    if (LuaState.style[0].fill) {
 		ctx.save();
 		ctx.beginPath();
@@ -1257,7 +1257,7 @@ function Transformation(a,b,c,d,e,f) {
 	this[5] = 0;
     }
 
-    this.applyTransform = function(x,y) {
+    this.applyTransformation = function(x,y) {
 	if (x instanceof Vec2 ) {
 	    y = x.y;
 	    x = x.x;
@@ -1267,7 +1267,7 @@ function Transformation(a,b,c,d,e,f) {
 	return new Vec2(xx,yy)
     }
 
-    this.applyTransformNoShift = function(x,y) {
+    this.applyTransformationNoShift = function(x,y) {
 	if (x instanceof Vec2 ) {
 	    y = x.y;
 	    x = x.x;
@@ -1277,7 +1277,7 @@ function Transformation(a,b,c,d,e,f) {
 	return new Vec2(xx, yy)
     }
 
-    this.applyTransformation = function(mr) {
+    this.composeTransformation = function(mr) {
 	var nm = [];
 	nm[0] = this[0] * mr[0] + this[2] * mr[1];
 	nm[1] = this[1] * mr[0] + this[3] * mr[1];
@@ -1329,7 +1329,22 @@ function Transformation(a,b,c,d,e,f) {
 	ang *= Math.PI/180;
 	var cs = Math.cos(ang);
 	var sn = Math.sin(ang);
-	this.applyTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+	this.composeTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+    }
+
+    this.__mul = function(z) {
+	if (z instanceof Transformation) {
+	    this.composeTransformation(z);
+	} else if (z instanceof Vec2) {
+	    this.applyTransformation(z);
+	} else if (z instanceof Number || typeof(z) === 'number') {
+	    this[0] *= z;
+	    this[1] *= z;
+	    this[2] *= z;
+	    this[3] *= z;
+	    this[4] *= z;
+	    this[5] *= z;
+	}
     }
     
     return this;
