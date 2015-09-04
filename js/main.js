@@ -446,6 +446,7 @@ function LuaCanvas(c,o,p) {
 		$(e.target).text('Resume');
 	    }
 	}
+	return false;
     }
     
     /*
@@ -999,13 +1000,11 @@ function LuaCanvas(c,o,p) {
 		var sfn,cfn;
 		cfn = function(e,u) {
 		    LuaG.set(name,u.value);
-		    return false;
 		}
 		if (typeof(f) === "function") {
 		    sfn = function(e,u) {
 			LuaG.set(name,u.value);
 			f(u.value);
-			return false;
 		    }
 		}
 		slider.slider({
@@ -1294,8 +1293,8 @@ function Transformation(a,b,c,d,e,f) {
     }
 
     this.translate = function(x,y) {
-	this[4] += x;
-	this[5] += y;
+	this[4] += this[0]*x + this[2]*y;
+	this[5] += this[1]*x + this[3]*y;
     }
     
     this.scale = function(a,b) {
