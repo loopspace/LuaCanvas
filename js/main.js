@@ -338,7 +338,8 @@ function LuaCanvas(c,o,p) {
     var params = p; // parameters pane
     var luaDraw; // the draw cycle timer
     var LuaState; // transformation and style and similar
-    var LuaExt; // our extensions
+    var LuaGrExt; // our graphical extensions
+    var LuaExt; // our non-graphical extensions
     var LuaG; // Lua's _G table
     var sTime; // time at which the script started
     var inTouch; // used for handling touches
@@ -589,7 +590,8 @@ function LuaCanvas(c,o,p) {
     })();
 
     this.prelua = function(g) {
-	var str = $('#lua_class').text() + ' ';
+	var str = 'print() clearOutput() ' +
+	    $('#lua_class').text() + ' ';
 	if (g) {
 	    str += $('#lua_parameters').text() +
 		' do ' +
@@ -661,14 +663,19 @@ function LuaCanvas(c,o,p) {
 	    g.set('ROUND',0);
 	    g.set('SQUARE',1);
 	    g.set('PROJECT',2);
-	    Object.keys(LuaExt).forEach(function(v,i,a) {
-		g.set(v, LuaExt[v]);
+	    Object.keys(LuaGrExt).forEach(function(v,i,a) {
+		g.set(v, LuaGrExt[v]);
 	    })
 	    g.set('blendmodes',blendmodes);
 	    g.set('setup', function() {});
 	    g.set('draw', function() {});
 	    g.set('touched', function() {});
 	    self.applyStyle(LuaState.defaultStyle);
+	} else {
+	    Object.keys(LuaExt).forEach(function(v,i,a) {
+		g.set(v, LuaExt[v]);
+	    })
+
 	}
     }
 
@@ -676,9 +683,18 @@ function LuaCanvas(c,o,p) {
       First argument is passed as 'this'.
     */
     LuaExt = {
+	clearOutput: function() {
+	    output.text('');
+	},
+    }
+    
+    LuaGrExt = {
 	initCycle: function(t) {
 	    var d = this;
 	    self.initCycle(d,t);
+	},
+	clearOutput: function() {
+	    output.text('');
 	},
 	rect: function(y,w,h) {
 	    var x = this;
