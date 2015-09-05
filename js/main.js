@@ -4,9 +4,14 @@ Set up Lua output to a div with id #output
 */
 var Module = {
     print: function(x) {
-	var txt = $('#output').text();
+	if (!$('#output').is(':empty')) {
+	    $('#output').append($('<br>'));
+	}
+/*	var txt = $('#output').text();
 	txt = (txt ? txt + '\n' : '') + x;
 	$('#output').text(txt);
+*/
+	$('#output').append(document.createTextNode(x));
     }
 }
 
@@ -361,6 +366,8 @@ function LuaCanvas(c,o,p) {
     var LuaState; // transformation and style and similar
     var LuaGrExt; // our graphical extensions
     var LuaExt; // our non-graphical extensions
+    var threadResume; // thread in non-graphical mode
+    var threadYield; // thread in non-graphical mode
     var LuaG; // Lua's _G table
     var sTime; // time at which the script started
     var inTouch; // used for handling touches
@@ -618,6 +625,8 @@ function LuaCanvas(c,o,p) {
 		' do ' +
 		'stroke(255,255,255) ' +
 		'fill(0,0,0) '
+	} else {
+	    str += 'function prompt(t) __prompt(t) _,b = coroutine.yield() return b end local __thread = coroutine.wrap(function() ';
 	}
 	str += 'do ';
 	return str;
@@ -630,8 +639,16 @@ function LuaCanvas(c,o,p) {
 	    'setup() ' +
 	    'do initCycle(draw,function (...) touched(select(2,...)) end) end ' +
 	    'end';
+	} else {
+	    str += ' end) initThread(__thread) ';
 	}
 	return str;
+    }
+
+    this.coresume = function() {
+	$(this).off('change');
+	$(this).prop('disabled',true);
+	threadResume($(this).val());
     }
 
     this.initCycle = (function () {
@@ -707,6 +724,24 @@ function LuaCanvas(c,o,p) {
 	clearOutput: function() {
 	    output.text('');
 	},
+	__prompt: function() {
+	    var txt = this;
+	    var tbox = $('<input>');
+	    tbox.attr('type','text');
+	    tbox.addClass('prompt');
+	    if (!output.is(':empty')) {
+		output.append( $('<br>'));
+	    }
+	    if (txt) {
+		output.append(document.createTextNode(txt));
+	    }
+	    output.append(tbox);
+	    tbox.change(self.coresume);
+	},
+	initThread: function() {
+	    threadResume = this;
+	    threadResume();
+	}
     }
     
     LuaGrExt = {
