@@ -38,6 +38,14 @@ function init() {
 	runCode(lc,cm,g);
 	return false;
     });
+    $('#graphics').change(function() {
+	tabs.reset();
+	if ($(this).is(':checked')) {
+	    cm.setValue($('#lua_template').text().trim());
+	} else {
+	    cm.setValue('');
+	}
+    });
     $('#edit').click(function() { 
 	startEditing(lc); 
 	return false;
@@ -255,6 +263,7 @@ function Tabs(t,cm) {
 	var tab = self.makeTab(t,false,id);
 	tab.insertBefore(add);
 	$(tab.children()[0]).trigger('click');
+	return false;
     }
 
     /*
@@ -324,6 +333,18 @@ function Tabs(t,cm) {
 	}
     }
 
+    /*
+      Reset
+    */
+
+    this.reset = function() {
+	tabs = {};
+	tabol.empty();
+	addlink.click(self.addTab);
+	tabol.append(add);
+	self.addTab(false,'Main','Main');
+    }
+    
     addlink.click(self.addTab);
     this.addTab(false,'Main','Main');
     return this;
@@ -385,7 +406,7 @@ function LuaCanvas(c,o,p) {
 	lcode += '\n' + code + '\n' + self.postlua(g);
 	if (cl) {
 	    output.text('');
-	    output.css('color',null);
+	    output.css('color','black');
 	    self.clear();
 	}
 	var L = new Lua.State;
