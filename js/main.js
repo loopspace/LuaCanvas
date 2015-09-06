@@ -626,7 +626,7 @@ function LuaCanvas(c,o,p) {
 		'stroke(255,255,255) ' +
 		'fill(0,0,0) '
 	} else {
-	    str += 'function prompt(t) __prompt(t) _,b = coroutine.yield() return b end local __thread = coroutine.wrap(function() ';
+	    str += 'do local __p = __prompt __prompt = nil function prompt(t) __p(t) local _,b = coroutine.yield() return b end end local __thread = coroutine.wrap(function() ';
 	}
 	str += 'do ';
 	return str;
