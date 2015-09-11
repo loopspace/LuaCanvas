@@ -134,7 +134,7 @@ function setExecuteSize(g) {
     } else {
 	$('#canvas').css('display','none');
 	$('#panel').width($('#container').width() - 40);
-	$('#restart').css('display','none');
+	$('#restart').css('display','inline');
 	$('#pause').css('display','none');
 	$('#paramdiv').css('display','none');
 	$('#outdiv').css('height','100%');
@@ -645,10 +645,12 @@ function LuaCanvas(c,o,p) {
 	return str;
     }
 
-    this.coresume = function() {
-	$(this).off('change');
-	$(this).prop('disabled',true);
-	threadResume($(this).val());
+    this.coresume = function(e) {
+	if (e.keyCode == 13) {
+	    $(this).off('keyup');
+	    $(this).prop('disabled',true);
+	    threadResume($(this).val());
+	}
     }
 
     this.initCycle = (function () {
@@ -725,7 +727,7 @@ function LuaCanvas(c,o,p) {
 	    output.text('');
 	},
 	__prompt: function() {
-	    var txt = this;
+	    var txt = (this === window) ? "" : this;
 	    var tbox = $('<input>');
 	    tbox.attr('type','text');
 	    tbox.addClass('prompt');
@@ -736,7 +738,7 @@ function LuaCanvas(c,o,p) {
 		output.append(document.createTextNode(txt));
 	    }
 	    output.append(tbox);
-	    tbox.change(self.coresume);
+	    tbox.keyup(self.coresume);
 	},
 	initThread: function() {
 	    threadResume = this;

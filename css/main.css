@@ -46,6 +46,14 @@ body {
     white-space: pre-wrap;
 }
 
+.prompt {
+    margin-bottom: 3px;
+    margin-left: 1ex;
+    margin-top: 3px;
+    padding-left: 3pt;
+}
+   
+
 #canvas {
     margin-left: calc(20ex + 30px);
     padding: 10px;
