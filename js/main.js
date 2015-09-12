@@ -214,9 +214,13 @@ function Tabs(t,cm) {
 	});
 	var title = $('#title').text().trim();
 	var blob = new Blob([code], {'type':'text/plain'});
-	var a = $(e.currentTarget);
-	a.attr('href', window.URL.createObjectURL(blob));
-	a.attr('download', title + '.lua');
+	if (typeof window.navigator.msSaveBlob === 'function') {
+	    window.navigator.msSaveBlob(blob, title + '.lua');
+	} else {
+	    var a = $(e.currentTarget);
+	    a.attr('href', window.URL.createObjectURL(blob));
+	    a.attr('download', title + '.lua');
+	}
     }
     
     /*
