@@ -15,6 +15,18 @@ var Module = {
     }
 }
 
+// shim layer with setTimeout fallback
+/*
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+*/
+
 /*
 Initialise code editor and lua interpreter
 */
@@ -669,7 +681,7 @@ function LuaCanvas(c,o,p) {
 	    LuaG.set('ElapsedTime',t - itime);
 	    LuaG.set('DeltaTime',t - time);
 	    time = t;
-	    luaDraw = new Timer(
+	    luaDraw = new Animation(
 		function() {
 		    LuaState.transformation = [new Transformation()];
 		    draw();
@@ -1483,27 +1495,27 @@ function Vec2(a,b) {
   Utilities
 */
 
-function Timer(callback, delay) {
+function Animation(callback, delay) {
     var timerId, start, remaining = delay;
     var self = this;
     
     this.isPaused = false;
     
     this.pause = function() {
-        window.clearTimeout(timerId);
+        window.cancelAnimationFrame(timerId);
         remaining -= new Date() - start;
 	self.isPaused = true;
     };
 
     this.resume = function() {
         start = new Date();
-        window.clearTimeout(timerId);
-        timerId = window.setTimeout(callback, remaining);
+        window.cancelAnimationFrame(timerId);
+        timerId = window.requestAnimationFrame(callback);
 	self.isPaused = false;
     };
 
     this.stop = function() {
-	window.clearTimeout(timerId);
+	window.cancelAnimationFrame(timerId);
     }
     
     this.resume();
