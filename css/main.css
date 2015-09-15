@@ -37,6 +37,15 @@ body {
     width: 100%;
 }
 
+.value {
+    float: right;
+}
+
+.ui-slider {
+    width: 80%;
+    margin-left: 10%;
+}
+
 #outdiv {
     height: 50%;
     overflow: auto;
