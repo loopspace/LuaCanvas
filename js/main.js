@@ -1495,24 +1495,32 @@ function Vec2(a,b) {
 	this.x = 0;
 	this.y = 0;
     }
+    return this;
+}
 
-    this.__add = function(v) {
+Vec2.prototype.__add = function(v) {
 	return new Vec2(this.x + v.x, this.y + v.y);
     }
     
-    this.__sub = function(v) {
+Vec2.prototype.__sub = function(v) {
 	return new Vec2(this.x - v.x, this.y - v.y);
     }
 
-    this.__mul = function(n) {
-	if (n instanceof Number || typeof(n) === 'number') {
-	    return new Vec2(this.x * n, this.y * n)
-	} else if (n instanceof Vec2) {
-	    return new Vec2(this.x * n.x - this.y * n.y, this.x * n.y + this.y * n.x)
-	}
+Vec2.prototype.__mul = function(n,m) {
+    if (typeof(m) === 'undefined') {
+	m = n;
+	n = this;
     }
+    if (n instanceof Number || typeof(n) === 'number') {
+	return new Vec2(m.x * n, m.y * n);
+    } else if (m instanceof Number || typeof(m) === 'number') {
+	return new Vec2(m * n.x, m * n.y);
+    } else if (n instanceof Vec2 && m instanceof Vec2) {
+	return new Vec2(m.x * n.x - m.y * n.y, m.x * n.y + m.y * n.x);
+    }
+}
 
-    this.__div = function(n) {
+Vec2.prototype.__div = function(n) {
 	if (n instanceof Number || typeof(n) === 'number') {
 	    return new Vec2(this.x / n, this.y / n)
 	} else if (n instanceof Vec2) {
@@ -1521,46 +1529,44 @@ function Vec2(a,b) {
 	}
     }
 
-    this.__eq = function(v) {
+Vec2.prototype.__eq = function(v) {
 	return (this.x == v.x) && (this.y == v.y);
     }
     
-    this.len = function() {
+Vec2.prototype.len = function() {
 	return Math.sqrt(this.x * this.x + this.y * this.y);
     }
     
-    this.lenSqr = function() {
+Vec2.prototype.lenSqr = function() {
 	return this.x * this.x + this.y * this.y;
     }
 
-    this.dist = function(v) {
+Vec2.prototype.dist = function(v) {
 	var x = this.x - v.x;
 	var y = this.y - v.y;
 	return Math.sqrt(x*x + y*y);
     }
 
-    this.distSqr = function(v) {
+Vec2.prototype.distSqr = function(v) {
 	var x = this.x - v.x;
 	var y = this.y - v.y;
 	return x*x + y*y;
     }
 
-    this.rotate = function(a) {
+Vec2.prototype.rotate = function(a) {
 	var x = this.x * Math.cos(a*Math.PI/180) + this.y * Math.sin(a*Math.PI/180);
 	var y = -this.x * Math.sin(a*Math.PI/180) + this.y * Math.cos(a*Math.PI/180);
 	return new Vec2(x,y);
     }
 
-    this.rotate90 = function() {
+Vec2.prototype.rotate90 = function() {
 	return new Vec2(-y,x);
     }
 
-    this.toString = function() {
+Vec2.prototype.toString = function() {
 	return '(' + this.x + ',' + this.y + ')';
     }
     
-    return this;
-}
 
 /*
   Utilities
