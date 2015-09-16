@@ -1,0 +1,27 @@
+body {
+    font-family: 'Raleway', sans-serif;
+}
+
+html {
+    background-color: #AAAAAA;
+}
+
+#content {
+    padding: 0ex 2ex;
+    -webkit-overflow-scrolling: touch;
+    background-color: #eee;
+    border: 2px solid;
+    border-radius: 2ex;
+}
+
+#titlepage {
+    width: 100%;
+    text-align: right;
+}
+
+#title {
+    font-weight: bold;
+    font-size: 200%;
+    width: 100%;
+    text-align: center;
+}
