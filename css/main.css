@@ -152,6 +152,7 @@ body {
     position: relative;
     overflow: hidden;
     display: inline;
+    margin-right: .5ex;
 }
 
 .fileUpload input.upload {

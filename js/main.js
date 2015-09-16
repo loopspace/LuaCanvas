@@ -772,6 +772,16 @@ function LuaCanvas(c,o,p) {
 	},
 	rect: function(y,w,h) {
 	    var x = this;
+	    if (x instanceof Vec2) {
+		h = w;
+		w = y;
+		y = x.y;
+		x = x.x;
+	    }
+	    if (w instanceof Vec2) {
+		h = w.y;
+		w = w.x;
+	    }
 	    if (LuaState.style[0].rectMode == 1) {
 		w -=x;
 		h -=y;
@@ -822,8 +832,10 @@ function LuaCanvas(c,o,p) {
 	    }
 	},
 	background: function(g,b,a) {
-	    var r = this;
-	    var c = new Colour(r,g,b,a);
+	    var c = this;
+	    if (!(c instanceof Colour)) {
+		c = new Colour(c,g,b,a);
+	    }
 	    ctx.save();
 	    ctx.globalCompositeOperation = 'source-over';
 	    ctx.fillStyle = c.toCSS();
@@ -833,9 +845,11 @@ function LuaCanvas(c,o,p) {
 	    ctx.restore();
 	},
 	fill: function (g,b,a) {
-	    var r = this;
-	    if (r !== window) {
-		var c = new Colour(r,g,b,a);
+	    var c = this;
+	    if (c !== window) {
+		if (!(c instanceof Colour)) {
+		    c = new Colour(c,g,b,a);
+		}
 		ctx.fillStyle = c.toCSS();
 		LuaState.style[0].fillColour = c;
 		LuaState.style[0].fill = true;
@@ -844,9 +858,12 @@ function LuaCanvas(c,o,p) {
 	    }
 	},
 	stroke: function (g,b,a) {
-	    var r = this;
-	    if (r !== window) {
-		var c = new Colour(r,g,b,a);
+	    var c = this;
+	    if (c !== window) {
+		var c;
+		if (!(c instanceof Colour)) {
+		    c = new Colour(c,g,b,a);
+		}
 		ctx.strokeStyle = c.toCSS();
 		LuaState.style[0].strokeColour = c;
 		LuaState.style[0].stroke = true;
@@ -872,6 +889,16 @@ function LuaCanvas(c,o,p) {
 	},
 	line: function (y,xx,yy) {
 	    var x = this;
+	    if (x instanceof Vec2) {
+		yy = xx;
+		xx = y;
+		y = x.y;
+		x = x.x;
+	    }
+	    if (xx instanceof Vec2) {
+		yy = xx.y;
+		xx = xx.x;
+	    }
 	    if (LuaState.style[0].stroke) {
 		var p = self.applyTransformation(x,y);
 		var pp = self.applyTransformation(xx,yy);
@@ -897,6 +924,10 @@ function LuaCanvas(c,o,p) {
 	    }
 	},
 	text: function (x,y) {
+	    if (x instanceof Vec2) {
+		y = x.y;
+		x = x.x;
+	    }
 	    var s = this;
 	    if (LuaState.style[0].textMode == 2) {
 		var tm = ctx.measureText(s);
@@ -930,6 +961,16 @@ function LuaCanvas(c,o,p) {
 	},
 	ellipse: function (y,w,h) {
 	    var x = this;
+	    if (x instanceof Vec2) {
+		h = w;
+		w = y;
+		y = x.y;
+		x = x.x;
+	    }
+	    if (w instanceof Vec2) {
+		h = w.y;
+		w = w.x;
+	    }
 	    if (typeof(h) === "undefined") {
 		h = w;
 	    }
@@ -1001,10 +1042,18 @@ function LuaCanvas(c,o,p) {
 	},
 	translate: function(y) {
 	    var x = this;
+	    if (x instanceof Vec2) {
+		y = x.y;
+		x = x.x;
+	    }
 	    LuaState.transformation[0] = LuaState.transformation[0].translate(x,y);
 	},
 	scale: function(b) {
 	    var a = this;
+	    if (a instanceof Vec2) {
+		b = a.y;
+		a = a.x;
+	    }
 	    LuaState.transformation[0] = LuaState.transformation[0].scale(a,b);
 	},
 	xsheer: function() {
@@ -1322,9 +1371,7 @@ function Colour(r,g,b,a) {
 
     return this;
 }
-/*
-  TODO: Transformation needs modifying to be more lua-like.  It should be 1-based and each function should return a new object rather than modifying the existing one.  This may need some of the manipulation of the model matrix changing.
-*/
+
 function Transformation(a,b,c,d,e,f) {
     if (typeof(a) !== 'undefined') {
 	if (a instanceof Transformation || typeof(a) === 'array') {
@@ -1355,128 +1402,144 @@ function Transformation(a,b,c,d,e,f) {
 	this[6] = 0;
     }
 
-    this.applyTransformation = function(x,y) {
-	if (x instanceof Vec2 ) {
-	    y = x.y;
-	    x = x.x;
-	}
-	var xx = this[1]*x + this[3]*y + this[5];
-	var yy = this[2]*x + this[4]*y + this[6];
-	return new Vec2(xx,yy)
-    }
-
-    this.applyTransformationNoShift = function(x,y) {
-	if (x instanceof Vec2 ) {
-	    y = x.y;
-	    x = x.x;
-	}
-	var xx = this[1]*x + this[3]*y;
-	var yy = this[2]*x + this[4]*y;
-	return new Vec2(xx, yy)
-    }
-
-    this.composeTransformation = function(mr) {
-	var nm = [];
-	nm[1] = this[1] * mr[1] + this[3] * mr[2];
-	nm[2] = this[2] * mr[1] + this[4] * mr[2];
-	nm[3] = this[1] * mr[3] + this[3] * mr[4];
-	nm[4] = this[2] * mr[3] + this[4] * mr[4];
-	nm[5] = this[1] * mr[5] + this[3] * mr[6] + this[5];
-	nm[6] = this[2] * mr[5] + this[4] * mr[6] + this[6];
-	return new Transformation(nm);
-    }
-
-    this.translate = function(x,y) {
-	var nm = new Transformation(this);
-	nm[5] += nm[1]*x + nm[3]*y;
-	nm[6] += nm[2]*x + nm[4]*y;
-	return nm;
-    }
-    
-    this.scale = function(a,b) {
-	if (typeof(b) === "undefined")
-	    b = a;
-	var nm = new Transformation(this);
-	nm[1] *= a;
-	nm[2] *= a;
-	nm[3] *= b;
-	nm[4] *= b;
-	return nm;
-    }
-    
-    this.xsheer = function(a) {
-	nm = new Transformation(this);
-	nm[3] += nm[1] * a;
-	nm[4] += nm[2] * a;
-	return nm;
-    }
-    
-    this.ysheer = function(a) {
-	nm = new Transformation(this);
-	nm[1] += nm[3] * a;
-	nm[2] += nm[4] * a;
-	return nm;
-    }
-    
-    this.rotate = function(ang,x,y) {
-	if (x instanceof Vec2) {
-	    y = x.y;
-	    x = x.x;
-	}
-	if (typeof(x) === "undefined")
-	    x = 0;
-	if (typeof(y) === "undefined")
-	    y = 0;
-	ang *= Math.PI/180;
-	var cs = Math.cos(ang);
-	var sn = Math.sin(ang);
-	return this.composeTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
-    }
-
-    this.__mul = function(z) {
-	if (z instanceof Transformation) {
-	    return this.composeTransformation(z);
-	} else if (z instanceof Vec2) {
-	    return this.applyTransformation(z);
-	} else if (z instanceof Number || typeof(z) === 'number') {
-	    var nm = new Transformation(this);
-	    nm[1] *= z;
-	    nm[2] *= z;
-	    nm[3] *= z;
-	    nm[4] *= z;
-	    nm[5] *= z;
-	    nm[6] *= z;
-	    return nm;
-	}
-    }
-
-    this.__div = function(z) {
-	if (z instanceof Number || typeof(z) === 'number') {
-	    var nm = new Transformation(this);
-	    nm[1] *= z;
-	    nm[2] *= z;
-	    nm[3] *= z;
-	    nm[4] *= z;
-	    nm[5] *= z;
-	    nm[6] *= z;
-	    return nm;
-	}
-    }
-
-    this.__eq = function(m) {
-	return this[1] == nm[1]
-	    && this[2] == nm[2]
-	    && this[3] == nm[3]
-	    && this[4] == nm[4]
-	    && this[5] == nm[5]
-	    && this[6] == nm[6]
-    }
-
-    this.toString = function() {
-	return '[' + this[1] + ',' + this[3] + ',' + this[5] + ']\n[' + this[2] + ',' + this[4] + ',' + this[6] + ']';
-    }
-    
     return this;
+}
+
+Transformation.prototype.applyTransformation = function(x,y) {
+    if (x instanceof Vec2 ) {
+	y = x.y;
+	x = x.x;
+    }
+    var xx = this[1]*x + this[3]*y + this[5];
+    var yy = this[2]*x + this[4]*y + this[6];
+    return new Vec2(xx,yy)
+}
+
+Transformation.prototype.applyTransformationNoShift = function(x,y) {
+    if (x instanceof Vec2 ) {
+	y = x.y;
+	x = x.x;
+    }
+    var xx = this[1]*x + this[3]*y;
+    var yy = this[2]*x + this[4]*y;
+    return new Vec2(xx, yy)
+}
+
+Transformation.prototype.composeTransformation = function(mr) {
+    var nm = [];
+    nm[1] = this[1] * mr[1] + this[3] * mr[2];
+    nm[2] = this[2] * mr[1] + this[4] * mr[2];
+    nm[3] = this[1] * mr[3] + this[3] * mr[4];
+    nm[4] = this[2] * mr[3] + this[4] * mr[4];
+    nm[5] = this[1] * mr[5] + this[3] * mr[6] + this[5];
+    nm[6] = this[2] * mr[5] + this[4] * mr[6] + this[6];
+    return new Transformation(nm);
+}
+
+Transformation.prototype.translate = function(x,y) {
+    var nm = new Transformation(this);
+    nm[5] += nm[1]*x + nm[3]*y;
+    nm[6] += nm[2]*x + nm[4]*y;
+    return nm;
+}
+    
+Transformation.prototype.scale = function(a,b) {
+    if (typeof(b) === "undefined")
+	b = a;
+    var nm = new Transformation(this);
+    nm[1] *= a;
+    nm[2] *= a;
+    nm[3] *= b;
+    nm[4] *= b;
+    return nm;
+}
+    
+Transformation.prototype.postscale = function(a,b) {
+    if (typeof(b) === "undefined")
+	b = a;
+    var nm = new Transformation(this);
+    nm[1] *= a;
+    nm[3] *= a;
+    nm[5] *= a;
+    nm[2] *= b;
+    nm[4] *= b;
+    nm[6] *= b;
+    return nm;
+}
+    
+Transformation.prototype.xsheer = function(a) {
+    nm = new Transformation(this);
+    nm[3] += nm[1] * a;
+    nm[4] += nm[2] * a;
+    return nm;
+}
+    
+Transformation.prototype.ysheer = function(a) {
+    nm = new Transformation(this);
+    nm[1] += nm[3] * a;
+    nm[2] += nm[4] * a;
+    return nm;
+}
+    
+Transformation.prototype.rotate = function(ang,x,y) {
+    if (x instanceof Vec2) {
+	y = x.y;
+	x = x.x;
+    }
+    if (typeof(x) === "undefined")
+	x = 0;
+    if (typeof(y) === "undefined")
+	y = 0;
+    ang *= Math.PI/180;
+    var cs = Math.cos(ang);
+    var sn = Math.sin(ang);
+    return this.composeTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+}
+
+Transformation.prototype.__mul = function(a,b) {
+    if (typeof(b) === 'undefined') {
+	b = a;
+	a = this;
+    }
+    if (a instanceof Number || typeof(a) === 'number') {
+	return b.postscale(a);
+    } else if (b instanceof Number || typeof(b) === 'number') {
+	return a.scale(b);
+    } else if (b instanceof Vec2) {
+	return a.applyTransformation(b);
+    } else {
+	return a.composeTransformation(b);
+    }
+}
+
+Transformation.prototype.__div = function(z) {
+    if (z instanceof Number || typeof(z) === 'number') {
+	var nm = new Transformation(this);
+	nm[1] *= z;
+	nm[2] *= z;
+	nm[3] *= z;
+	nm[4] *= z;
+	nm[5] *= z;
+	nm[6] *= z;
+	return nm;
+    }
+}
+
+Transformation.prototype.__unm = function() {
+    return this.postscale(-1);
+}
+
+Transformation.prototype.__eq = function(m) {
+    return this[1] == nm[1]
+	&& this[2] == nm[2]
+	&& this[3] == nm[3]
+	&& this[4] == nm[4]
+	&& this[5] == nm[5]
+	&& this[6] == nm[6]
+}
+
+Transformation.prototype.toString = function() {
+    return '[' + this[1] + ',' + this[3] + ',' + this[5] + ']\n[' + this[2] + ',' + this[4] + ',' + this[6] + ']';
 }
 
 function Vec2(a,b) {
@@ -1495,39 +1558,76 @@ function Vec2(a,b) {
 	this.x = 0;
 	this.y = 0;
     }
+
     return this;
 }
 
-Vec2.prototype.__add = function(v) {
-	return new Vec2(this.x + v.x, this.y + v.y);
-    }
-    
-Vec2.prototype.__sub = function(v) {
-	return new Vec2(this.x - v.x, this.y - v.y);
-    }
+/*
+  Add, subtract, and divide can all take numbers on either side and
+  treat the result as if a Vec2 was a complex number.
+*/
 
-Vec2.prototype.__mul = function(n,m) {
-    if (typeof(m) === 'undefined') {
-	m = n;
-	n = this;
+Vec2.prototype.__add = function(a,b) {
+    if (typeof(b) === 'undefined') {
+	b = a;
+	a = this;
     }
-    if (n instanceof Number || typeof(n) === 'number') {
-	return new Vec2(m.x * n, m.y * n);
-    } else if (m instanceof Number || typeof(m) === 'number') {
-	return new Vec2(m * n.x, m * n.y);
-    } else if (n instanceof Vec2 && m instanceof Vec2) {
-	return new Vec2(m.x * n.x - m.y * n.y, m.x * n.y + m.y * n.x);
+    if (b instanceof Number || typeof(b) === 'number') {
+	return new Vec2(a.x+b,a.y);
+    } else if (a instanceof Number || typeof(a) === 'number') {
+	return new Vec2(a + b.x,b.y);
+    } else {
+	return new Vec2(a.x + b.x, a.y + b.y);
+    }
+}
+    
+Vec2.prototype.__sub = function(a,b) {
+    if (typeof(b) === 'undefined') {
+	b = a;
+	a = this;
+    }
+    if (b instanceof Number || typeof(b) === 'number') {
+	return new Vec2(a.x-b,a.y);
+    } else if (a instanceof Number || typeof(a) === 'number') {
+	return new Vec2(a - b.x,-b.y);
+    } else {
+	return new Vec2(a.x - b.x, a.y - b.y);
     }
 }
 
-Vec2.prototype.__div = function(n) {
-	if (n instanceof Number || typeof(n) === 'number') {
-	    return new Vec2(this.x / n, this.y / n)
-	} else if (n instanceof Vec2) {
-	    var l = n.lenSqr();
-	    return new Vec2((this.x * n.x + this.y * n.y)/l, (-this.x * n.y + this.y * n.x)/l)
-	}
+Vec2.prototype.__mul = function(a,b) {
+    if (typeof(b) === 'undefined') {
+	b = a;
+	a = this;
     }
+    if (b instanceof Number || typeof(b) === 'number') {
+	return new Vec2(a.x*b,a.y*b);
+    } else if (a instanceof Number || typeof(a) === 'number') {
+	return new Vec2(a * b.x, a * b.y);
+    } else {
+	return new Vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+    }
+}
+
+Vec2.prototype.__div = function(a,b) {
+    if (typeof(b) === 'undefined') {
+	b = a;
+	a = this;
+    }
+    var l;
+    if (b instanceof Number || typeof(b) === 'number') {
+	return new Vec2(a.x/b,a.y/b);
+    } else if (a instanceof Number || typeof(a) === 'number') {
+	l = b.lenSqr();
+	return new Vec2(a * b.x/l, -a * b.y/l);
+    } else {
+	return new Vec2((a.x * b.x + a.y * b.y)/l, (-a.x * b.y + a.y * b.x)/l);
+    }
+}
+
+Vec2.prototype.__unm = function() {
+    return new Vec2(-this.x,-this.y);
+}
 
 Vec2.prototype.__eq = function(v) {
 	return (this.x == v.x) && (this.y == v.y);
@@ -1566,7 +1666,6 @@ Vec2.prototype.rotate90 = function() {
 Vec2.prototype.toString = function() {
 	return '(' + this.x + ',' + this.y + ')';
     }
-    
 
 /*
   Utilities
