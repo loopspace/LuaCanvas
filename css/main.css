@@ -37,6 +37,11 @@ body {
     width: 100%;
 }
 
+#paramdiv select {
+    float: right;
+    margin-left: 1ex;
+}
+
 .value {
     float: right;
 }
@@ -44,6 +49,10 @@ body {
 .ui-slider {
     width: 80%;
     margin-left: 10%;
+}
+
+div.parameter {
+    clear: both;
 }
 
 #outdiv {

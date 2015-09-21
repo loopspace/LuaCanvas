@@ -298,7 +298,7 @@ function parameter.boolean(n,i,f)
         f = i
         i = true
     end
-    if not i then
+    if i == nil then
         i = true
     end
     if type(f) == "function" then
@@ -306,6 +306,19 @@ function parameter.boolean(n,i,f)
     end
     __parameter.bool(n,i,fn)
 end
+
+function parameter.select(n,o,i,f)
+    local fn
+    if not f and type(i) == "function" then
+        f = i
+        i = o[1]
+    end
+    if type(f) == "function" then
+        fn = function(a,b) f(b) end
+    end
+    __parameter.select(n,o,i,fn)
+end
+
       </div>
       <div id="lua_template" class="lua_code">
 function setup()

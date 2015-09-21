@@ -1097,6 +1097,10 @@ function LuaCanvas(c,o,p) {
 	    var x = this;
 	    return new Vec2(x,y);
 	},
+	coordinate: function(y) {
+	    var x = this;
+	    return new Vec2(x,y);
+	},
 	log: function() {
 	    console.log(this);
 	},
@@ -1129,12 +1133,17 @@ function LuaCanvas(c,o,p) {
 		    }
 		}
 		tfield.change(cfn);
-		params.append(tname);
-		params.append(tfield);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		pdiv.append(tname);
+		pdiv.append(tfield);
+		params.append(pdiv);
 	    },
 	    number: function(a,b,i,v,f) {
 		var name = this;
 		LuaG.set(name,i);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
 		var slider = $('<div>');
 		var tval = $('<span>');
 		var sfn,cfn;
@@ -1164,9 +1173,50 @@ function LuaCanvas(c,o,p) {
 		tval.text(i);
 		tval.addClass('parameter');
 		tval.addClass('value');
-		params.append(tname);
-		params.append(tval);
-		params.append(slider);
+		pdiv.append(tname);
+		pdiv.append(tval);
+		pdiv.append(slider);
+		params.append(pdiv);
+	    },
+	    select: function(o,i,f) {
+		var name = this;
+		LuaG.set(name,i);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		var tname = $('<span>');
+		tname.text(name);
+		tname.addClass('parameter');
+		tname.addClass('select');
+		var sel = $('<select>');
+		var op;
+		var v;
+		for (var i = 1; typeof(o.get(i)) !== "undefined"; i++) {
+		    op = $('<option>');
+		    v = o.get(i);
+		    op.val(v);
+		    op.text(v);
+		    if (v === i) {
+			op.attr('selected',true);
+		    }
+		    sel.append(op);
+		}
+		var cfn;
+		if (typeof(f) === "function") {
+		    cfn = function(e) {
+			LuaG.set(name,$(e.target).val());
+			f($(e.target).val());
+			return false;
+		    }
+		} else {
+		    cfn = function(e) {
+			LuaG.set(name,$(e.target).val());
+			return false;
+		    }
+		}
+		sel.change(cfn);
+		pdiv.append(tname);
+		pdiv.append(sel);
+		params.append(pdiv);
 	    },
 	    watch: function() {
 		var wexp = this;
@@ -1177,8 +1227,11 @@ function LuaCanvas(c,o,p) {
 		var tfield = $('<span>');
 		tfield.addClass('parameter');
 		tfield.addClass('watch_expression');
-		params.append(tname);
-		params.append(tfield);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		pdiv.append(tname);
+		pdiv.append(tfield);
+		params.append(pdiv);
 		return function() {
 		    tfield.text(this);
 		}
@@ -1213,8 +1266,11 @@ function LuaCanvas(c,o,p) {
 		    }
 		}
 		tfield.change(cfn);
-		params.append(tname);
-		params.append(tfield);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		pdiv.append(tname);
+		pdiv.append(tfield);
+		params.append(pdiv);
 	    },
 	    clear: function() {
 		params.empty();
@@ -1227,7 +1283,10 @@ function LuaCanvas(c,o,p) {
 		tfield.attr('type','button');
 		tfield.val(name);
 		tfield.click(function() {f(); return false;});
-		params.append(tfield);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		pdiv.append(tfield);
+		params.append(pdiv);
 	    },
 	    bool: function(i,f) {
 		var name = this;
@@ -1268,8 +1327,11 @@ function LuaCanvas(c,o,p) {
 		    }
 		}
 		tfield.change(cfn);
-		params.append(tname);
-		params.append(dv);
+		var pdiv = $('<div>');
+		pdiv.addClass('parameter');
+		pdiv.append(tname);
+		pdiv.append(dv);
+		params.append(pdiv);
 		dv.append(tfield);
 		dv.append(lbl);
 		lbl.append(spna);
@@ -1654,8 +1716,8 @@ Vec2.prototype.distSqr = function(v) {
     }
 
 Vec2.prototype.rotate = function(a) {
-	var x = this.x * Math.cos(a*Math.PI/180) + this.y * Math.sin(a*Math.PI/180);
-	var y = -this.x * Math.sin(a*Math.PI/180) + this.y * Math.cos(a*Math.PI/180);
+	var x = this.x * Math.cos(a*Math.PI/180) - this.y * Math.sin(a*Math.PI/180);
+	var y = this.x * Math.sin(a*Math.PI/180) + this.y * Math.cos(a*Math.PI/180);
 	return new Vec2(x,y);
     }
 
