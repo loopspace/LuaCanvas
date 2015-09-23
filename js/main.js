@@ -27,6 +27,20 @@ window.requestAnimFrame = (function(){
 })();
 */
 
+var qs = (function(a) {
+    if (a == "") return {};
+    var b = {};
+    for (var i = 0; i < a.length; ++i)
+    {
+        var p=a[i].split('=', 2);
+        if (p.length == 1)
+            b[p[0]] = "";
+        else
+            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+    }
+    return b;
+})(window.location.search.substr(1).split('&'));
+
 /*
 Initialise code editor and lua interpreter
 */
@@ -86,6 +100,18 @@ function init() {
 	$('#theme option').filter(function () { return $(this).html() == theme}).attr('selected', 'selected');
     };
     $('#theme').trigger('change');
+
+    if (qs['project']) {
+	var project = qs['project'];
+	if (project.slice(-1) == '/') {
+	    project = project.slice(0,-1);
+	}
+	$.ajax({
+	    url: "projects/" + project + ".lua",
+	}).done(function(data) {
+	    tabs.setCode(data);
+	}).fail(function() { alert("Failed to get project " + project); });
+    }
 }
 
 $(document).ready(init);
@@ -242,37 +268,44 @@ function Tabs(t,cm) {
 	var reader = new FileReader();
 
 	reader.onload = function(e){
-	    var code = e.target.result.split(/\n(--## [^\n]*)\n/);
-	    var i = 0;
-	    var match;
-	    var tab;
-	    var curr;
-	    var first = true;
-	    tabs = {};
-	    $('.tab').remove();
-	    while(i < code.length) {
-		match = code[i].match(/^--## ([^\n]+)/);
-		if (match !== null) {
-		    tabs[match[1]] = code[++i].trim();
-		    if (first || match[1] == "Main" ) {
-			curr = true;
-			cm.setValue(code[i].trim());
-		    } else {
-			curr = false;
-		    }
-		    tab = self.makeTab(match[1],curr);
-		    tab.insertBefore($("#add").parent());
-		    first = false;
-		}
-		i++;
-	    }
-	    $('current').parent().attr('id','Main');
+	    self.setCode(e.target.result);
 	}
 	var t = f.target.files[0].name;
 	var re = new RegExp('\\.[^/.]+$');
 	t = t.replace(re, "");
 	$('#title').text(t);
 	reader.readAsText(f.target.files[0]);
+    }
+
+    /*
+      Insert the code into tabs
+    */
+    this.setCode = function(c) {
+	var code = c.split(/\n(--## [^\n]*)\n/);
+	var i = 0;
+	var match;
+	var tab;
+	var curr;
+	var first = true;
+	tabs = {};
+	$('.tab').remove();
+	while(i < code.length) {
+	    match = code[i].match(/^--## ([^\n]+)/);
+	    if (match !== null) {
+		tabs[match[1]] = code[++i].trim();
+		if (first || match[1] == "Main" ) {
+		    curr = true;
+		    cm.setValue(code[i].trim());
+		} else {
+		    curr = false;
+		}
+		tab = self.makeTab(match[1],curr);
+		tab.insertBefore($("#add").parent());
+		first = false;
+	    }
+	    i++;
+	}
+	$('current').parent().attr('id','Main');
     }
 
     /*
@@ -439,27 +472,35 @@ function LuaCanvas(c,o,p) {
 	try {
 	    L.execute(lcode);
 	} catch(e) {
-	    var emsg;
-	    if (e.toString().search(/:(\d+):/) != -1) {
-		var eline = e.toString().match(/:(\d+):/)[1];
-		var lines = lcode.split('\n');
-		var tab,m,n = 0;
-		for (var i = 0; i< eline; i++) {
-		    if (lines[i].search(/^--##/) != -1) {
-			m = lines[i].match(/^--## (.*)/);
-			tab = m[1];
-			n = i;
-		    }
-		}
-		emsg = e.toString().replace(/.*:(\d+):\s*/, function(a,b) { return 'Tab: ' + tab + '\nLine: ' + (parseInt(b,10) - n - 2) + '\n' });
-	    } else {
-		emsg = e.toString();
-	    }
-	    output.css('color','red');
-	    output.text(emsg);
+	    self.doError(e);
 	}
     }
 
+    this.doError = function(e) {
+	var emsg;
+	var lcode = self.prelua(graphics);
+	var offset = lcode.split('\n').length - 1;
+	lcode += '\n' + code + '\n' + self.postlua(graphics);
+	if (e.toString().search(/:(\d+):/) != -1) {
+	    var eline = e.toString().match(/:(\d+):/)[1];
+	    var lines = lcode.split('\n');
+	    var tab,m,n = 0;
+	    for (var i = 0; i< eline; i++) {
+		if (lines[i].search(/^--##/) != -1) {
+		    m = lines[i].match(/^--## (.*)/);
+		    tab = m[1];
+		    n = i;
+		}
+	    }
+	    emsg = e.toString().replace(/.*:(\d+):\s*/, function(a,b) { return 'Tab: ' + tab + '\nLine: ' + (parseInt(b,10) - n - 2) + '\n' });
+	} else {
+	    emsg = e.toString();
+	}
+	output.css('color','red');
+	output.text(emsg);
+    }
+
+    
     /*
       Restart the code from fresh
     */
@@ -515,7 +556,7 @@ function LuaCanvas(c,o,p) {
 		    lineCapMode: 0,
 		    font: 'sans-serif',
 		    fontSize: 12,
-		    textAlign: 0,
+		    textValign: 1,
 		    blendMode: 'source-over'
 		}
 	    ],
@@ -531,7 +572,7 @@ function LuaCanvas(c,o,p) {
 		lineCapMode: 0,
 		font: 'sans-serif',
 		fontSize: 12,
-		textAlign: 0,
+		textValign: 1,
 		blendMode: 'source-over'
 	    },
 	    touches: [],
@@ -684,8 +725,20 @@ function LuaCanvas(c,o,p) {
 	    luaDraw = new Animation(
 		function() {
 		    LuaState.transformation = [new Transformation()];
-		    draw();
-		    LuaState.touches.forEach(touched);
+		    try {
+			draw();
+		    } catch(e) {
+			self.doError(e);
+		    }
+		    LuaState.touches.forEach(
+			function(t) {
+			    try {
+				touched(t);
+			    } catch(e) {
+				self.doError(e);
+			    }
+			}
+		    );
 		    LuaState.touches = [];
 		    LuaState.watches.forEach(function(v) {v()});
 		    doCycle();
@@ -716,6 +769,11 @@ function LuaCanvas(c,o,p) {
 	    g.set('CENTER',2);
 	    g.set('CENTRE',2);
 	    g.set('RADIUS',3);
+	    g.set('LEFT',0);
+	    g.set('RIGHT',1);
+	    g.set('BOTTOM',0);
+	    g.set('BASELINE',1);
+	    g.set('TOP',3);
 	    g.set('ROUND',0);
 	    g.set('SQUARE',1);
 	    g.set('PROJECT',2);
@@ -929,25 +987,71 @@ function LuaCanvas(c,o,p) {
 		x = x.x;
 	    }
 	    var s = this;
-	    if (LuaState.style[0].textMode == 2) {
-		var tm = ctx.measureText(s);
-		x -= tm.width;
-	    }
 	    var p = self.applyTransformation(x,y);
-	    var q = self.applyTransformationNoShift(1,0);
-	    var ql = Math.sqrt(q.x*q.x + q.y*q.y);
-	    var r = self.applyTransformationNoShift(0,-1);
-	    var rl = Math.sqrt(r.x*r.x + r.y*r.y);
+	    var q = self.applyTransformationNoShift(1,0).normalise();
+	    var r = self.applyTransformationNoShift(0,-1).normalise();
+	    if (LuaState.style[0].textMode == 1) {
+		var tm = ctx.measureText(s);
+		p = p.__sub(q.__mul(tm.width));
+	    } else if (LuaState.style[0].textMode == 2) {
+		var tm = ctx.measureText(s);
+		p = p.__sub(q.__mul(tm.width/2));
+	    }
+	    if (LuaState.style[0].textValign == 0) {
+		var f = LuaState.style[0].fontSize + 'px ' + LuaState.style[0].font;
+		var fm = getTextHeight(f,s);
+		p = p.__sub(r.__mul(fm.descent));
+	    } else if (LuaState.style[0].textValign == 2) {
+		var f = LuaState.style[0].fontSize + 'px ' + LuaState.style[0].font;
+		var fm = getTextHeight(f,s);
+		p = p.__add(r.__mul(fm.height/2-fm.descent));
+	    } else if (LuaState.style[0].textValign == 3) {
+		var f = LuaState.style[0].fontSize + 'px ' + LuaState.style[0].font;
+		var fm = getTextHeight(f,s);
+		p = p.__add(r.__mul(fm.ascent));
+	    }
 	    ctx.save();
 	    ctx.beginPath();
-	    ctx.setTransform(q.x/ql,q.y/ql,r.x/rl,r.y/rl,p.x,p.y);
+	    ctx.setTransform(q.x,q.y,r.x,r.y,p.x,p.y);
 	    ctx.fillText(s,0,0);
 	    ctx.restore();
+	},
+	textMode: function() {
+	    var m = this;
+	    if (m !== window) {
+		if (m == 0) {
+		    LuaState.style[0].textMode = 0;
+		} else if (m == 1) {
+		    LuaState.style[0].textMode = 1;
+		} else if (m == 2) {
+		    LuaState.style[0].textMode = 2;
+		}
+	    } else {
+		return LuaState.style[0].textMode;
+	    }
+	},
+	textValign: function() {
+	    var m = this;
+	    if (m !== window) {
+		if (m == 0) {
+		    LuaState.style[0].textValign = 0;
+		} else if (m == 1) {
+		    LuaState.style[0].textValign = 1;
+		} else if (m == 2) {
+		    LuaState.style[0].textValign = 2;
+		} else if (m == 3) {
+		    LuaState.style[0].textValign = 3;
+		}
+	    } else {
+		return LuaState.style[0].textValign;
+	    }
 	},
 	textSize: function() {
 	    var s = this;
 	    var tm = ctx.measureText(s);
-	    return tm.width;
+	    var f = LuaState.style[0].fontSize + 'px ' + LuaState.style[0].font;
+	    var fm = getTextHeight(f,s);
+	    return tm.width,fm.height;
 	},
 	font: function () {
 	    var f = this;
@@ -1023,13 +1127,13 @@ function LuaCanvas(c,o,p) {
 	},
 	popStyle: function() {
 	    LuaState.style.shift();
-	    applyStyle(LuaState.style[0]);
+	    self.applyStyle(LuaState.style[0]);
 	},
 	resetStyle: function() {
 	    Object.keys(LuaState.defaultStyle).forEach(function(v) {
 		LuaState.style[0][v] = LuaState.defaultStyle[v];
 	    })
-	    applyStyle(LuaState.style[0]);
+	    self.applyStyle(LuaState.style[0]);
 	},
 	pushTransformation: function() {
 	    LuaState.transformation.unshift(new Transformation(LuaState.transformation[0]));
@@ -1703,6 +1807,17 @@ Vec2.prototype.lenSqr = function() {
 	return this.x * this.x + this.y * this.y;
     }
 
+Vec2.prototype.normalise = function() {
+    var l = this.len();
+    if (l !== 0) {
+	return new Vec2(this.x/l,this.y/l);
+    } else {
+	return new Vec2(1,0);
+    }
+}
+
+Vec2.prototype.normalize = Vec2.prototype.normalise;
+
 Vec2.prototype.dist = function(v) {
 	var x = this.x - v.x;
 	var y = this.y - v.y;
@@ -1762,3 +1877,37 @@ function Animation(callback, delay) {
 function toHex(d) {
     return  ("0"+(Number(d).toString(16))).slice(-2).toUpperCase()
 }
+
+/*
+  From: http://stackoverflow.com/a/9847841
+*/
+
+var getTextHeight = function(font,s) {
+
+  var text = $('<span>' + s + '</span>').css({ fontFamily: font });
+  var block = $('<div style="display: inline-block; width: 1px; height: 0px;"></div>');
+
+  var div = $('<div></div>');
+  div.append(text, block);
+
+  var body = $('body');
+  body.append(div);
+
+  try {
+
+    var result = {};
+
+    block.css({ verticalAlign: 'baseline' });
+    result.ascent = block.offset().top - text.offset().top;
+
+    block.css({ verticalAlign: 'bottom' });
+    result.height = block.offset().top - text.offset().top;
+
+    result.descent = result.height - result.ascent;
+
+  } finally {
+    div.remove();
+  }
+
+  return result;
+};
