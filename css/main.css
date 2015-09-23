@@ -52,6 +52,7 @@ body {
 }
 
 div.parameter {
+    margin-bottom: 5px;
     clear: both;
 }
 
