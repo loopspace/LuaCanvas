@@ -25,9 +25,67 @@
 	  </p>
 	  <p>
 	    It is heavily inspired by the awesome iPad App
-	    <a href="http://codea.io/">Codea</a>.
-	    
+	    <a href="http://codea.io/">Codea</a> which is a fantastic
+	    environment in which to simply have fun while learning to
+	    program.  The only downside of Codea is that it only runs
+	    on an iPad, making it impractical to use as a teaching
+	    tool where iPads are not already in use.  Thus LuaCanvas
+	    was developed to provide the same experience but more
+	    widely available.
 	  </p>
+	  <p>
+	    Although inspired by Codea and with many features borrowed
+	    from Codea, it is not a clone.  Both consist of a Lua
+	    interpreter with extra commands that are primarily aimed
+	    at making it easy to do some graphical programming.  The
+	    key difference is where those commands are processed.  In
+	    LuaCanvas, the program is given access to an HTML5 Canvas
+	    element and the commands are tailored to its capabilities
+	    (for the moment, just using a 2D context).
+	  </p>
+	  <p>
+	    The components involved in designing LuaCanvas were:
+	  </p>
+	  <ol>
+	    <li><strong>Lua</strong>: The Lua language is very
+	      straightforward and compact.  There aren't lots of
+	      confusing ways to achieve the same ends but it is
+	      nevertheless an extremely capable language.  It is a
+	      very good first (or second) written programming
+	      language.
+	    <li><strong>Graphics</strong>: The great thing about
+	      Codea was that it gave you an easy way to do graphical
+	      programming.  It itself was following in the tradition
+	      of Processing.  Graphics is <em>fun</em>, but also
+	      with a high education potential.  It is hard to do
+	      much without any mathematics.
+	    <li><strong>Browser</strong>: The goal was to make
+	      LuaCanvas work anywhere without installing any software.
+	      This effectively meant that it had to work in a
+	      browser as that can be reliably assumed to exist on
+	      every computer.
+	  </ol>
+	  <p>
+	    All of these considerations led to the choice of using a
+	    Lua VM compiled into JavaScript with extra functions that
+	    give the Lua code access to an HTML5 Canvas element.  It
+	    is hoped that this will prove to be an enjoyable
+	    environment in which to learn some programming (and
+	    mathematics).
+	  </p>
+	  <p>
+	    LuaCanvas is built using:
+	  </p>
+	  <ul>
+	    <li><a href="https://kripken.github.io/lua.vm.js/lua.vm.js.html">Lua
+		VM</a> compiled into JavaScript.  (Actually, it uses a
+	      slight modification of that project.)
+	    <li><a href="https://codemirror.net/">Code Mirror</a>
+	      for the editing environment.
+	    <li><a href="https://jquery.com/">JQuery</a> and parts of
+	    the <a href="https://jqueryui.com/">JQuery UI</a> to make
+	    life easier in the code. 
+	  </ul>
 	</div>
       </div>
     </div>
