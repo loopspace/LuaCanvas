@@ -66,7 +66,7 @@ function init() {
 
     $('#execute').click(function() {
 	var g = $('#graphics').is(':checked');
-	runCode(lc,cm,g);
+	runCode(lc,tabs,g);
 	return false;
     });
     $('#graphics').change(function() {
@@ -110,6 +110,7 @@ function init() {
 	    url: "projects/" + project + ".lua",
 	}).done(function(data) {
 	    tabs.setCode(data);
+	    $('#title').text(project);
 	}).fail(function() { alert("Failed to get project " + project); });
     }
 }
@@ -182,19 +183,13 @@ function setExecuteSize(g) {
 /*
 Get the code from the editor and pass it to the interpreter
 */
-function runCode(lc,cm,g) {
+function runCode(lc,tabs,g) {
     $('#editor').css('display','none');
     $('#editButtons').css('display','none');
     $('#runButtons').css('display','block');
     $('#run').css('display','block');
     setExecuteSize(g);
-    var code = '';
-    var ctab = $('.current').text().trim();
-    tabs[ctab] = cm.getValue().trim() + '\n';
-    $('.tabtitle').each(function(e) {
-	if (tabs[$(this).last().text()])
-	    code += '\n--## ' + $(this).last().text() + '\ndo\n' + tabs[$(this).last().text()] + '\nend\n';
-    });
+    var code = tabs.getCode(true);
     lc.executeLua(code,true,g);
     return false;
 }
@@ -240,16 +235,33 @@ function Tabs(t,cm) {
     });
 
     /*
-      Save the code to a file
+      Get the code from the tabs, if b is true, wrap each tab in do ... end
     */
-    this.saveCode = function(e) {
+    this.getCode = function(b) {
+	var pre;
+	var post;
+	if (b) {
+	    pre = '\ndo\n';
+	    post = '\nend\n';
+	} else {
+	    pre = '\n\n';
+	    post = '\n\n';
+	}
 	var code = '';
 	var ctab = $('.current').text().trim();
 	tabs[ctab] = cm.getValue().trim() + '\n';
 	$('.tabtitle').each(function(e) {
 	    if (tabs[$(this).last().text()])
-		code += '\n--## ' + $(this).last().text() + '\n\n' + tabs[$(this).last().text()] + '\n\n';
+		code += '\n--## ' + $(this).last().text() + pre + tabs[$(this).last().text()] + post;
 	});
+	return code;
+    }
+    
+    /*
+      Save the code to a file
+    */
+    this.saveCode = function(e) {
+	var code = self.getCode();
 	var title = $('#title').text().trim();
 	var blob = new Blob([code], {'type':'text/plain'});
 	if (typeof window.navigator.msSaveBlob === 'function') {
@@ -1322,10 +1334,12 @@ function LuaCanvas(c,o,p) {
 		pdiv.append(sel);
 		params.append(pdiv);
 	    },
-	    watch: function() {
+	    watch: function(t) {
 		var wexp = this;
+		if (typeof(t) === "undefined")
+		    t = wexp;
 		var tname = $('<span>');
-		tname.text(wexp + ':');
+		tname.text(t + ':');
 		tname.addClass('parameter');
 		tname.addClass('watch_title');
 		var tfield = $('<span>');
