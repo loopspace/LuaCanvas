@@ -2,58 +2,91 @@
 --## Main
 
 function setup()
+  g=Grid(20,5)
   c=coordinate
-  coordinates = {}
-  scaleFactor = (HEIGHT-20)/40
-  parameter.watch("#coordinates")
-  parameter.action("Undo",function() table.remove(coordinates) end)
-  parameter.colour("lineColour",colour(255,255,255))
-  parameter.action("Show",function() for k,v in ipairs(coordinates) do print(v) end end)
+  coordinates = {{colour = colour(255,255,255)}}
+  parameter.watch("#coordinates[1]")
+  parameter.action("Undo",function() table.remove(coordinates[1]) end)
+  parameter.colour("lineColour",colour(255,255,255),function(c) coordinates[1].colour = c end)
+  parameter.action("New Set of Lines",function() table.insert(coordinates,1,{colour = lineColour}) end)
+  parameter.action("Show",function() for k,v in ipairs(coordinates) do print("---") for l,u in ipairs(v) do print(u) end end end)
+  parameter.action("Clear", function() coordinates = {{colour = lineColour }}
+ end)
 end
 
 function draw()
   background(40,40,50)
   strokeWidth(3)
-  drawGrid()
-  stroke(lineColour)
-  pv = coordinates[1]
-  for k=2,#coordinates do
-    line(coordinates[k-1],coordinates[k])
+  g:draw()
+  for j,v in ipairs(coordinates) do
+    stroke(v.colour)
+    for k=2,#v do
+      line(v[k-1],v[k])
     end
+  end
+  noStroke()
+  fill(50,200,50)
+  ellipse(coordinates[1][#coordinates[1]],.5)
 end
 
 function touched(t)
   if t.state == "BEGAN" then
-    x = math.floor((t.x - WIDTH/2)/scaleFactor+.5)
-    y = math.floor((t.y - HEIGHT/2)/scaleFactor+.5)
-		table.insert(coordinates,c(x,y))
+    x = math.floor((t.x - WIDTH/2)/g.scaleFactor+.5)
+    y = math.floor((t.y - HEIGHT/2)/g.scaleFactor+.5)
+		table.insert(coordinates[1],c(x,y))
     end
   end
-    
-function drawGrid()
+
+
+
+--## Grid
+
+Grid = class()
+
+function Grid:init(n,s)
+  self.scale = s
+  self.size = n
+end
+
+function Grid:draw()
+  local n,s = self.size,self.scale
+  local sf = math.min((WIDTH-20)/(2*n),(HEIGHT-20)/(2*n))
+  self.scaleFactor = sf
+  local xm,ym = math.floor((WIDTH-20)/(2*sf)),math.floor((HEIGHT-20)/(2*sf))
+   pushStyle()
   translate(WIDTH/2,HEIGHT/2)
-  scale(scaleFactor)
+  scale(sf)
   stroke(100)
-  for k=1,20 do
-    line(k,-20,k,20)
-    line(-k,-20,-k,20)
-    line(-20,k,20,k)
-    line(-20,-k,20,-k)
+  strokeWidth(1)
+  for k=1,xm do
+    line(k,-ym,k,ym)
+    line(-k,-ym,-k,ym)
+  end
+  for k=1,ym do
+    line(-xm,k,xm,k)
+    line(-xm,-k,xm,-k)
     end
   stroke(255)
-  line(0,-20,0,20)
-  line(-20,0,20,0)
+  line(0,-ym,0,ym)
+  line(-xm,0,xm,0)
   fill(255)
-  for k=5,20,5 do
+  textMode(CENTRE)
+  textValign(TOP)
+  for k=s,xm,s do
     line(k,0,k,-.5)
-    text(k,k,-1.5)
+    text(k,k,-.5)
     line(-k,0,-k,-.5)
-    text(-k,-k,-1.5)
+    text(-k,-k,-.5)
+  end
+  textMode(RIGHT)
+  textValign(CENTRE)
+  for k=s,ym,s do
     line(0,k,-.5,k)
-    text(k,-2,k)
+    text(k,-1,k)
     line(0,-k,-.5,-k)
-    text(-k,-2,-k)
-    end
+    text(-k,-1,-k)
+  end
+  popStyle()
   end
 
 
