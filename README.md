@@ -29,7 +29,7 @@ It is also possible to detect mouse clicks on the canvas.  Any clicks are passed
 This project uses the following `javascript` libraries:
 
 1. [CodeMirror](https://codemirror.net/) for the code editor part.
-2. [lua.vm.js](https://github.com/loopspace/lua.vm.js) for the lua interpreter.  Note that this is my fork of the original: I extended it a tiny bit to add more metamethods for `userdata`.
+2. [lua.vm.js](https://github.com/loopspace/lua.vm.js) for the lua interpreter.
 3. [jQuery](https://jquery.com/) to make life a little easier inside the code.
 4. [jQuery-ui](https://jqueryui.com/) to make life a little easier outside the code.
 
