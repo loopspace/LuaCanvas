@@ -3,7 +3,13 @@
 use strict;
 use HTML::Entities;
 
-opendir(my $dir, 'lua') || die "Can't open directory: $!\n";
+my $lualoc = $ARGV[0];
+
+if (!-e $lualoc || !-d $lualoc) {
+    die "Can't access $lualoc\n";
+}
+
+opendir(my $dir, $lualoc) || die "Can't open directory: $!\n";
 
 my @files;
 
