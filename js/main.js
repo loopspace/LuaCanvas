@@ -1851,7 +1851,7 @@ Vec2.prototype.rotate = function(a) {
     }
 
 Vec2.prototype.rotate90 = function() {
-	return new Vec2(-y,x);
+	return new Vec2(-this.y,this.x);
     }
 
 Vec2.prototype.toString = function() {
