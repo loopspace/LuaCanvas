@@ -5,7 +5,7 @@ function setup()
   g=Grid(20,5)
   c=coordinate
   coordinates = {{colour = colour(255,255,255)}}
-  parameter.watch("#coordinates[1]")
+  parameter.watch("Number of Coordinates","#coordinates[1]")
   parameter.action("Undo",function() table.remove(coordinates[1]) end)
   parameter.colour("lineColour",colour(255,255,255),function(c) coordinates[1].colour = c end)
   parameter.action("New Set of Lines",function() table.insert(coordinates,1,{colour = lineColour}) end)
@@ -26,16 +26,18 @@ function draw()
   end
   noStroke()
   fill(50,200,50)
-  ellipse(coordinates[1][#coordinates[1]],.5)
+  if #coordinates[1] ~= 0 then
+      ellipse(coordinates[1][#coordinates[1]],.5)
+  end
 end
 
 function touched(t)
   if t.state == "BEGAN" then
-    x = math.floor((t.x - WIDTH/2)/g.scaleFactor+.5)
-    y = math.floor((t.y - HEIGHT/2)/g.scaleFactor+.5)
-		table.insert(coordinates[1],c(x,y))
-    end
+      x = math.floor((t.x - WIDTH/2)/g.scaleFactor+.5)
+      y = math.floor((t.y - HEIGHT/2)/g.scaleFactor+.5)
+      table.insert(coordinates[1],c(x,y))
   end
+end
 
 
 

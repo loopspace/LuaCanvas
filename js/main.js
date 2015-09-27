@@ -564,6 +564,8 @@ function LuaCanvas(c,o,p) {
 		    strokeWidth: 1,
 		    rectMode: 0,
 		    ellipseMode: 0,
+		    arcMode: 0,
+		    bezierMode: 0,
 		    textMode: 0,
 		    lineCapMode: 0,
 		    font: 'sans-serif',
@@ -580,6 +582,8 @@ function LuaCanvas(c,o,p) {
 		strokeWidth: 1,
 		rectMode: 0,
 		ellipseMode: 0,
+		arcMode: 0,
+		bezierMode: 0,
 		textMode: 0,
 		lineCapMode: 0,
 		font: 'sans-serif',
@@ -867,20 +871,15 @@ function LuaCanvas(c,o,p) {
 	    var p = self.applyTransformation(x,y);
 	    var r = self.applyTransformationNoShift(w,0);
 	    var s = self.applyTransformationNoShift(0,h);
+	    ctx.beginPath();
+	    ctx.save();
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
+	    ctx.rect(0,0,1,1);
+	    ctx.restore();
 	    if (LuaState.style[0].fill) {
-		ctx.beginPath();
-		ctx.save();
-		ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
-		ctx.rect(0,0,1,1);
-		ctx.restore();
 		ctx.fill();
 	    }
 	    if (LuaState.style[0].stroke) {
-		ctx.beginPath();
-		ctx.save();
-		ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
-		ctx.rect(0,0,1,1);
-		ctx.restore();
 		ctx.stroke();
 	    }
 	},
@@ -890,6 +889,22 @@ function LuaCanvas(c,o,p) {
 		LuaState.style[0].rectMode = m;
 	    } else {
 		return LuaState.style[0].rectMode;
+	    }
+	},
+	arcMode: function() {
+	    var m = this;
+	    if (this !== window) {
+		LuaState.style[0].arcMode = m;
+	    } else {
+		return LuaState.style[0].arcMode;
+	    }
+	},
+	bezierMode: function() {
+	    var m = this;
+	    if (this !== window) {
+		LuaState.style[0].bezierMode = m;
+	    } else {
+		return LuaState.style[0].bezierMode;
 	    }
 	},
 	blendMode: function() {
@@ -975,6 +990,90 @@ function LuaCanvas(c,o,p) {
 		ctx.beginPath();
 		ctx.moveTo(p.x,p.y);
 		ctx.lineTo(pp.x,pp.y);
+		ctx.stroke();
+	    }
+	},
+/*
+How should the anges interact with the transformation?
+*/
+	arc: function(y,r,sa,ea) {
+	    var x = this;
+	    if (x instanceof Vec2) {
+		ea = sa;
+		sa = r;
+		r = y;
+		y = x.y;
+		x = x.x;
+	    }
+	    if (LuaState.style[0].arcMode == 1)
+		ea += sa;
+	    sa *= Math.PI/180;
+	    ea *= Math.PI/180;
+	    var p = self.applyTransformation(x,y);
+	    var q = self.applyTransformationNoShift(r,0);
+	    var s = self.applyTransformationNoShift(0,r);
+	    ctx.beginPath();
+	    ctx.save();
+	    ctx.setTransform(q.x,q.y,s.x,s.y,p.x,p.y);
+	    ctx.arc(0,0,1,sa,ea);
+	    ctx.restore();
+	    if (LuaState.style[0].stroke) {
+		ctx.stroke();
+	    }
+	},
+	bezier: function(ay,bx,by,cx,cy,dx,dy) {
+	    var ax = this;
+	    if (ax instanceof Vec2) {
+		dy = dx;
+		dx = cy;
+		cy = cx;
+		cx = by;
+		by = bx;
+		bx = ay;
+		ay = ax.y;
+		ax = ax.x;
+	    }
+	    if (bx instanceof Vec2) {
+		dy = dx;
+		dx = cy;
+		cy = cx;
+		cx = by;
+		by = bx.y;
+		bx = bx,x;
+	    }
+	    if (cx instanceof Vec2) {
+		dy = dx;
+		dx = cy;
+		cy = cx.y;
+		cx = cx.x;
+	    }
+	    if (dx instanceof Vec2) {
+		dy = dx.y;
+		dx = dx.x;
+	    }
+
+	    if (LuaState.style[0].bezierMode == 1) {
+		cy += dy;
+		cx += dx;
+		by += ay;
+		bx += ax;
+	    }
+	    dy -= ay;
+	    dx -= ax;
+	    cy -= ay;
+	    cx -= ax;
+	    by -= ay;
+	    bx -= ax;
+	    var p = self.applyTransformation(ax,ay);
+	    var q = self.applyTransformationNoShift(1,0);
+	    var s = self.applyTransformationNoShift(0,1);
+	    ctx.beginPath();
+	    ctx.save();
+	    ctx.setTransform(q.x,q.y,s.x,s.y,p.x,p.y);
+	    ctx.moveTo(0,0);
+	    ctx.bezierCurveTo(bx,by,cx,cy,dx,dy);
+	    ctx.restore();
+	    if (LuaState.style[0].stroke) {
 		ctx.stroke();
 	    }
 	},
@@ -1105,20 +1204,15 @@ function LuaCanvas(c,o,p) {
 	    var p = self.applyTransformation(x,y);
 	    var r = self.applyTransformationNoShift(w,0);
 	    var s = self.applyTransformationNoShift(0,h);
+	    ctx.save();
+	    ctx.beginPath();
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
+	    ctx.arc(0,0,1,0, 2 * Math.PI,false);
+	    ctx.restore();
 	    if (LuaState.style[0].fill) {
-		ctx.save();
-		ctx.beginPath();
-		ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
-		ctx.arc(0,0,1,0, 2 * Math.PI,false);
-		ctx.restore();
 		ctx.fill();
 	    }
 	    if (LuaState.style[0].stroke) {
-		ctx.save();
-		ctx.beginPath();
-		ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
-		ctx.arc(0,0,1,0, 2 * Math.PI,false);
-		ctx.restore();
 		ctx.stroke();
 	    }
 	},
