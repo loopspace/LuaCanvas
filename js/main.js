@@ -1436,10 +1436,8 @@ How should the anges interact with the transformation?
 		pdiv.append(sel);
 		params.append(pdiv);
 	    },
-	    watch: function(t) {
-		var wexp = this;
-		if (typeof(t) === "undefined")
-		    t = wexp;
+	    watch: function() {
+		var t = this;
 		var tname = $('<span>');
 		tname.text(t + ':');
 		tname.addClass('parameter');

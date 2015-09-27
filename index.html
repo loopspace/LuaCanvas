@@ -229,8 +229,8 @@ function parameter.text(n,i,f)
     __parameter.text(n,i,fn)
 end
 
-function parameter.watch(s)
-    local ufn = __parameter.watch(s)
+function parameter.watch(t,s)
+    local ufn = __parameter.watch(t)
     local fn = function() ufn(loadstring("return " .. s )()) end
     __parameter.watchfn(fn)
 end
