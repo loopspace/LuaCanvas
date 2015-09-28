@@ -123,7 +123,16 @@ $(document).ready(init);
 function selectTheme(cm) {
     var theme = $('#theme option:selected').text();
     localStorage.setItem("theme",theme);
-    cm.setOption("theme",theme);
+    if (theme !== 'default') {
+	$.ajax({
+	    url: "css/theme/" + theme + ".css",
+	}).done(function(data) {
+	    $("head").append("<style>" + data + "</style");
+	    cm.setOption("theme",theme);
+	}).fail(function() { alert("Failed to load editor theme " + theme); });
+    } else {
+	cm.setOption("theme","default");
+    }
 }
 
 /*
