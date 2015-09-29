@@ -190,6 +190,7 @@ function parameter.text(n,i,f)
 end
 
 function parameter.watch(t,s)
+    s = s or t
     local ufn = __parameter.watch(t)
     local fn = function() ufn(loadstring("return " .. s )()) end
     __parameter.watchfn(fn)
