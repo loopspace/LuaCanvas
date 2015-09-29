@@ -817,6 +817,7 @@ function LuaCanvas(c,o,p) {
 	    g.set('setup', function() {});
 	    g.set('draw', function() {});
 	    g.set('touched', function() {});
+	    LuaState = this.getLuaState();
 	    self.applyStyle(LuaState.defaultStyle);
 	} else {
 	    Object.keys(LuaExt).forEach(function(v,i,a) {
@@ -1011,11 +1012,12 @@ function LuaCanvas(c,o,p) {
 	    }
 	},
 /*
-How should the anges interact with the transformation?
+How should the angles interact with the transformation?
 */
-	arc: function(y,r,sa,ea) {
+	arc: function(y,r,sa,ea,cl) {
 	    var x = this;
 	    if (x instanceof Vec2) {
+		cl = ea;
 		ea = sa;
 		sa = r;
 		r = y;
@@ -1032,7 +1034,7 @@ How should the anges interact with the transformation?
 	    ctx.beginPath();
 	    ctx.save();
 	    ctx.setTransform(q.x,q.y,s.x,s.y,p.x,p.y);
-	    ctx.arc(0,0,1,sa,ea);
+	    ctx.arc(0,0,1,sa,ea,cl);
 	    ctx.restore();
 	    if (LuaState.style[0].stroke) {
 		ctx.stroke();
@@ -1328,6 +1330,10 @@ How should the anges interact with the transformation?
 	    var x = this;
 	    return new Vec2(x,y);
 	},
+	path: function(b) {
+	    var a = this;
+	    return new Path(a,b);
+	},
 	log: function() {
 	    console.log(this);
 	},
@@ -1571,9 +1577,228 @@ How should the anges interact with the transformation?
 	    }
 	}
     }
+
+
+    /*
+      Path is a subobject of LuaCanvas so that it has access to the
+      current transformation
+    */
+
+    Path = new(function(t) {
+	return function(x,y) {
+	    var lc = t;
+	    var self = this;
+	    this.path = [];
+	
+	    if (typeof x !== "undefined") {
+		var p = lc.applyTransformation(x,y);
+		this.path.push(["moveTo",[p.x,p.y]]);
+		self.point = p;
+	    }
+
+	    this.moveTo = function(x,y) {
+		var p = lc.applyTransformation(x,y);
+		self.path.push(["moveTo",[p.x,p.y]]);
+		self.point = p;
+	    }
+	    
+	    this.lineTo = function(x,y) {
+		var p = lc.applyTransformation(x,y);
+		self.path.push(["lineTo",[p.x,p.y]]);
+		self.point = p;
+	    }
+
+	    this.curveTo = function(bx,by,cx,cy,dx,dy) {
+		if (bx instanceof Vec2) {
+		    dy = dx
+		    dx = cy
+		    cy = cx
+		    cx = by
+		    by = bx.y
+		    bx = bx.x
+		}
+		if (cx instanceof Vec2) {
+		    dy = dx
+		    dx = cy
+		    cy = cx.y
+		    cx = cx.x
+		}
+		if (dx instanceof Vec2) {
+		    dy = dx.y
+		    dx = dx.x
+		}
+		if (LuaState.style[0].bezierMode == 1) {
+		    cy += dy;
+		    cx += dx;
+		    by += self.point.y;
+		    bx += self.point.x;
+		}
+		var p = lc.applyTransformation(dx,dy);
+		var q = lc.applyTransformation(cx,cy);
+		var r = lc.applyTransformation(bx,by);
+		
+		self.path.push(["bezierCurveTo",[r.x,r.y,q.x,q.y,p.x,p.y]]);
+	    }
+	    /*
+	      Should the angles of an arc interact with the transformation?
+	     */
+	    this.arc = function(x,y,r,sa,ea,cl) {
+		if (x instanceof Vec2) {
+		    ea = sa;
+		    sa = r;
+		    r = y;
+		    y = x.y;
+		    x = x.x;
+		}
+		if (LuaState.style[0].arcMode == 1)
+		    ea += sa;
+		sa *= -Math.PI/180;
+		ea *= -Math.PI/180;
+		cl = !cl;
+		var p = lc.applyTransformation(x,y);
+		self.path.push(["arc",[p.x,p.y,r,sa,ea,cl]]);
+	    }
+
+
+	    /*
+	      Consider replacing rect by a piece-wise rect.
+	    */
+	    this.rect = function(x,y,w,h) {
+		if (x instanceof Vec2) {
+		    h = w;
+		    w = y;
+		    y = x.y;
+		    x = x.x;
+		}
+		if (w instanceof Vec2) {
+		    h = w.y;
+		    w = w.x;
+		}
+		if (LuaState.style[0].rectMode == 1) {
+		    w -=x;
+		    h -=y;
+		} else if (LuaState.style[0].rectMode == 2) {
+		    x -= w/2;
+		    y -= h/2;
+		} else if (LuaState.style[0].rectMode == 3) {
+		    x -= w/2;
+		    y -= h/2;
+		    w *= 2;
+		    h *= 2;
+		}
+		var p = lc.applyTransformation(x,y);
+		self.path.push(["rect",[p.x,p.y,w,h]]);
+		self.point = p;
+	    }
+
+	    this.draw = function(b,m) {
+		var p;
+		if (b) {
+		    if (typeof m === 'undefined')
+			m = LuaState.transformation[0];
+		    p = [];
+		    self.path.forEach(function(v) {
+			var a = argTransform[v[0]](m,v[1]);
+			p.push([v[0],a]);
+		    });
+		} else {
+		    p = self.path;
+		}
+		ctx.save();
+		ctx.setTransform(1,0,0,1,0,0);
+		ctx.beginPath();
+		p.forEach(function(v) {
+		    ctx[v[0]].apply(ctx,v[1]);
+		});
+		ctx.restore();
+		if (LuaState.style[0].stroke)
+		    ctx.stroke();
+		if (LuaState.style[0].fill)
+		    ctx.fill();
+	    }
+
+	    this.clear = function() {
+		self.path = [];
+	    }
+
+	    var argTransform = {
+		moveTo: function(m,a) {
+		    var ch = ctx.canvas.height;
+		    var x,y;
+		    x = a[0];
+		    y = ch - a[1];
+		    var p = m.applyTransformation(x,y);
+		    p.y *= -1;
+		    p.y += ch;
+		    return [p.x,p.y];
+		},
+		lineTo: function(m,a) {
+		    var ch = ctx.canvas.height;
+		    var x,y;
+		    x = a[0];
+		    y = ch - a[1];
+		    var p = m.applyTransformation(x,y);
+		    p.y *= -1;
+		    p.y += ch;
+		    return [p.x,p.y];
+		},
+		curveTo: function(m,a) {
+		    var ch = ctx.canvas.height;
+		    var x,y,p;
+		    x = a[0];
+		    y = ch - a[1];
+		    p = m.applyTransformation(x,y);
+		    x = a[2];
+		    y = ch - a[3];
+		    q = m.applyTransformation(x,y);
+		    x = a[4];
+		    y = ch - a[5];
+		    r = m.applyTransformation(x,y);
+		    p.y *= -1;
+		    p.y += ch;
+		    q.y *= -1;
+		    q.y += ch;
+		    r.y *= -1;
+		    r.y += ch;
+		    return [p.x,p.y,q.x,q.y,r.x,r.y];
+		},
+		arc: function(m,a) {
+		    var ch = ctx.canvas.height;
+		    var x,y;
+		    x = a[0];
+		    y = ch - a[1];
+		    var p = m.applyTransformation(x,y);
+		    p.y *= -1;
+		    p.y += ch;
+		    return [p.x,p.y,a[2],a[3],a[4],a[5]];
+		},
+		rect: function(m,a) {
+		    var ch = ctx.canvas.height;
+		    var x,y;
+		    x = a[0];
+		    y = ch - a[1];
+		    var p = m.applyTransformation(x,y);
+		    p.y *= -1;
+		    p.y += ch;
+		    return [p.x,p.y,a[2],a[3]];
+		}
+
+	    }
+	    
+	}
+    })(this);
+
 }
+
+
 /*
   Userdata
+
+Available objects:
+Colour
+Transformation
+Vec2
+Path - subobject of LuaCanvas
 */
 
 var svg,x11
@@ -1980,6 +2205,7 @@ Vec2.prototype.rotate90 = function() {
 Vec2.prototype.toString = function() {
 	return '(' + this.x + ',' + this.y + ')';
     }
+
 
 /*
   Utilities
