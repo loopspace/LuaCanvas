@@ -8,6 +8,8 @@
 ./js/jquery-ui.min.js
 ./index.html
 ./about.html
+./help.html
+./css/help.css
 ./css/images/ui-bg_flat_55_fafafa_40x100.png
 ./css/images/ui-icons_734d99_256x240.png
 ./css/images/ui-icons_ebccce_256x240.png
