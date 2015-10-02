@@ -1,0 +1,310 @@
+body
+{
+    font-family: "myriad-pro", "Helvetica", sans-serif;
+    margin: 0;
+    padding-left: 0px;
+    padding-right: 0px;
+    padding-top: 0px;
+    padding-bottom: 20px;    
+    color: #614a5f;
+    font-weight: 100;
+    
+    border-left: 11px solid #580069;
+}
+
+h1, h1 a
+{
+    color: #002a2c;
+    font-weight: 400;
+}
+
+#chapter
+{
+    position: relative;
+    left: 5px;
+    background-color: rgb(88, 0, 105);    
+    background-image: -webkit-linear-gradient(rgba(88, 0, 105, 1.0) 0%, rgba(156, 0, 128, 0.7) 100%), url("../images/flowlines.jpg");    
+    background-image: linear-gradient(rgba(88, 0, 105, 1.0) 0%, rgba(156, 0, 128, 0.7) 100%), url("../images/flowlines.jpg");
+    background-size: cover;
+    background-position: center 30%;
+    padding-bottom: 0px;
+    width: 695px;
+    height: 200px;
+    overflow: hidden;
+}
+
+#chapter-title
+{
+    position: relative;
+    display: inline;
+    white-space: nowrap;
+    left: 10px;
+    top: 65px;
+    text-overflow: clip;   
+    vertical-align: text-bottom;
+}
+
+ul.chapter-list
+{
+    margin: 0;
+    padding: 0;   
+    margin-top: 5;
+    margin-left: 5;
+    list-style-type: none;
+}
+
+ul.chapter-list li
+{
+    border: 1px solid #d4bdd1;
+    display: inline-block;   
+    margin: 0;
+    padding: 0;
+    margin-bottom: 
+}
+
+.chapter-icon
+{
+    display: table;   
+}
+
+.chapter-icon img
+{
+    background-color: rgba(156, 0, 128, 1);
+}
+
+.chapter-icon-title
+{
+    display: table-cell;
+    vertical-align: middle;
+    min-width: 136;
+    padding-left: 10;
+    padding-right: 10;
+}
+
+#chapter-title h1 
+{
+    color: white;
+    font-size: 4.5em;
+    font-weight: 100;
+    letter-spacing: -2px;
+}
+
+h2, h2 a
+{
+    color: #580069;
+    font-weight: 100;
+}
+
+h3, h3 a
+{
+    color: #4c424a;
+    font-weight: 100;    
+}
+
+h4
+{
+    color: #211c20;
+    margin-bottom: 0;
+    font-weight: 100;    
+}
+
+h2.subtitle
+{
+    font-weight: 100;
+    color: #262726;
+}
+
+h3.subtitle {
+    margin-left: 5px;
+}
+
+a
+{
+    color: #9f1098;
+    text-decoration: none;
+}
+
+a:hover
+{
+    color: #d700cc;
+    font-weight: 400;
+}
+
+li
+{
+    padding-top: 1px;
+    padding-bottom: 1px;    
+}
+
+ul
+{
+    list-style-type: none;
+}
+
+ul.sec-ref
+{}
+
+ul.sec-ref li
+{
+    padding-top: 10px;
+}
+
+ul.func-ref
+{
+    font-size: small;
+}
+
+ul.func-ref li
+{
+    padding-top: 0px;
+    display: list-item;
+    margin-left: -20px;
+    font-weight: 400;    
+    font-style: italic;
+}
+
+.toplink
+{
+    font-variant: small-caps;
+    font-size: smaller;
+    float: right;
+    padding-right: 5px;
+    padding-top: 10px;
+    color: #747174;
+}
+
+.documentation
+{
+    margin-left: auto;
+    margin-right: auto;
+    width: 900px;    
+}
+
+.section
+{
+    padding-top: 10px;
+}
+
+.section h2
+{
+    padding-top: 10px;
+    padding-bottom: 10px;    
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-bottom: 0;
+    border-top: 2px solid #580069;
+    color: #6a5b66;
+}
+
+.function
+{
+    padding-top: 8px;
+    margin-left: 20px;
+    margin-right: 10px;    
+}
+
+.function-body
+{
+    margin-left: 20px;
+}
+
+.syntax
+{
+    background: #c74bc1;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 1px;
+    padding-bottom: 5px;
+    margin-right: 10px;
+    color: white;    
+}
+
+.syntax h4
+{
+    color: white;
+}
+
+.parameters
+{
+    font-size: smaller;    
+}
+
+.parameters td
+{
+    padding: 10px;
+    color: #6a5b66;
+}
+
+.parameter-desc
+{
+    background-color: rgba(242,242,245,1.0);
+    font-weight: 100;
+}
+
+.parameter-name
+{
+    background-color: white;
+    font-weight: 400;
+    text-align: right;
+}
+
+*[id^='example-']
+{
+    width: 600px;
+    height: 400px;
+    position: relative;
+    margin: 20px;
+}
+
+/* Type Graphics*/
+
+.type-icon
+{
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    margin-right: 10px;
+    margin-left: 20px;
+    margin-bottom: -8px;
+    background-size: contain;    
+}
+
+.type-tiny-icon
+{
+    list-style-type: none; 
+    background: url("../images/Type-Overview.png") 0px 0px no-repeat;
+    background-size: contain;    
+    margin: 0;
+    margin-top: 3px;
+    padding-left: 20px;
+}
+
+.type-overview
+{
+    background-image: url("../images/Type-Overview.png");
+}
+
+.type-function
+{
+    background-image: url("../images/Type-Function.png");
+}
+
+.type-method
+{
+    background-image: url("../images/Type-Method.png");
+}
+
+.type-const
+{
+    background-image: url("../images/Type-Const.png");
+}
+
+.type-type
+{
+    background-image: url("../images/Type-Type.png");
+}
+
+.outline h2
+{
+    padding-left: 5px;
+}
