@@ -58,8 +58,21 @@ function init() {
     var ctx = cvs.getContext('2d');
     var lc = new LuaCanvas(ctx,$('#output'),$('#parameters'));
     var tabs = new Tabs($('#tabs'),cm);
-    if ($('#graphics').is(':checked')) {
-	cm.setValue($('#lua_template').text().trim());
+    var code = localStorage.getItem('code');
+    if (code !== null) {
+	tabs.setCode(code);
+	var title = localStorage.getItem('title');
+	if (title !== null) {
+	    $('#title').text(title);
+	}
+	var gr = localStorage.getItem('graphics');
+	if (gr !== null) {
+	    $('#graphics').prop('checked',gr);
+	}
+    } else {
+	if ($('#graphics').is(':checked')) {
+	    cm.setValue($('#lua_template').text().trim());
+	}
     }
 
     $('#panel').data('origWidth',$('#panel').width());
@@ -198,7 +211,11 @@ function runCode(lc,tabs,g) {
     $('#runButtons').css('display','block');
     $('#run').css('display','block');
     setExecuteSize(g);
-    var code = tabs.getCode(true);
+    var code = tabs.getCode();
+    localStorage.setItem('code',code);
+    localStorage.setItem('title',$('#title').text());
+    localStorage.setItem('graphics',$('#graphics').is(':checked'));
+    code = tabs.getCode(true);
     lc.executeLua(code,true,g);
     return false;
 }
@@ -326,7 +343,8 @@ function Tabs(t,cm) {
 	    }
 	    i++;
 	}
-	$('current').parent().attr('id','Main');
+	$('.current').parent().attr('id','Main');
+	$('.current').attr('contenteditable',false);
     }
 
     /*
@@ -422,6 +440,8 @@ function Tabs(t,cm) {
     
     addlink.click(self.addTab);
     this.addTab(false,'Main','Main');
+    $('.current').attr('contenteditable',false);
+
     return this;
 }
 /*
