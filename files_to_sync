@@ -72,3 +72,4 @@
 ./projects/MakeCoordinates.lua
 ./projects/CurveStitch.lua
 ./projects/Coordinates.lua
+./projects/Cellular.lua
