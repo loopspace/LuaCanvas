@@ -18,6 +18,12 @@ h1, h1 a
     font-weight: 400;
 }
 
+#luacanvas
+{
+    background-color: rgba(88, 0, 105, 1);
+    float: left;
+}
+
 #chapter
 {
     position: relative;
