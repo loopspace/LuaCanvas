@@ -1,17 +1,30 @@
+/*
+  TODO:
+
+  Consider loading the lua vm via ajax to speed up initial load time
+
+  Add sprites via a spritesheet (use Lost Garden)
+
+  Keyboard?
+*/
+
 
 /*
 Set up Lua output to a div with id #output
 */
 var Module = {
     print: function(x) {
-	if (!$('#output').is(':empty')) {
-	    $('#output').append($('<br>'));
+	var out = $('#output');
+	if (!out.is(':empty')) {
+	    out.append($('<br>'));
 	}
 /*	var txt = $('#output').text();
 	txt = (txt ? txt + '\n' : '') + x;
 	$('#output').text(txt);
 */
-	$('#output').append(document.createTextNode(x));
+	out.append(document.createTextNode(x));
+	var outdiv = $('#outdiv');
+	outdiv.prop('scrollTop',outdiv.prop('scrollHeight'));
     }
 }
 
@@ -152,7 +165,8 @@ function selectTheme(cm) {
 Start editing: ensure that the lua draw cycle isn't running and show the relevant divs.
 */
 function startEditing(lc) {
-    lc.stopLua();
+    if (lc)
+	lc.stopLua();
     $('#run').css('display','none');
     $('#runButtons').css('display','none');
     $('#editButtons').css('display','block');
@@ -666,13 +680,21 @@ function LuaCanvas(c,o,p) {
 	ctx.restore();
     }
 
+/*
+Currently only records a single touch.  Needs a bit of work to track multiple touches correctly.
+*/
+    
     this.startTouch = function(e) {
+	e.preventDefault();
+	window.blockMenuHeaderScroll = true;
 	self.recordTouch(e);
 	inTouch = true;
 	$(ctx.canvas).on('mousemove touchmove',self.recordTouch);
     }
 
     this.stopTouch = function(e) {
+	e.preventDefault();
+	window.blockMenuHeaderScroll = false;
 	if (inTouch)
 	    self.recordTouch(e);
 	$(ctx.canvas).off('mousemove touchmove');
@@ -685,10 +707,20 @@ function LuaCanvas(c,o,p) {
     this.recordTouch = (function() {
 	var prevTouch;
 	return function(e) {
+	    e.preventDefault();
 	    var s;
-	    var px,py,dx,dy,x,y;
-	    x = Math.floor(e.pageX - $(ctx.canvas).offset().left);
-	    y = $(ctx.canvas).offset().top + parseInt($(ctx.canvas).attr('height'),10) - e.pageY;
+	    var px,py,dx,dy,x,y,pgx,pgy,id,radx;
+	    if (e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel' ) {
+		var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+		pgx = touch.pageX;
+		pgy = touch.pageY;
+		id = touch.identifier;
+	    } else {
+		pgx = e.pageX;
+		pgy = e.pageY;
+	    }
+	    x = Math.floor(pgx - $(ctx.canvas).offset().left);
+	    y = $(ctx.canvas).offset().top + parseInt($(ctx.canvas).attr('height'),10) - pgy;
 	    if (e.type == 'mousedown' || e.type == 'touchstart') {
 		s = 'BEGAN';
 	    } else if (e.type == 'mousemove' || e.type == 'touchmove') {
@@ -706,6 +738,7 @@ function LuaCanvas(c,o,p) {
 	    }
 	    var t = {
 		state: s,
+		id: id,
 		time: e.timestamp - sTime,
 		x: x,
 		y: y,
@@ -833,6 +866,8 @@ function LuaCanvas(c,o,p) {
 	    Object.keys(LuaGrExt).forEach(function(v,i,a) {
 		g.set(v, LuaGrExt[v]);
 	    })
+	    g.set('ElapsedTime',0);
+	    g.set('DeltaTime',0);
 	    g.set('blendmodes',blendmodes);
 	    g.set('setup', function() {});
 	    g.set('draw', function() {});
@@ -1255,6 +1290,38 @@ How should the angles interact with the transformation?
 		ctx.stroke();
 	    }
 	},
+	circle: function (y,r) {
+	    var x = this;
+	    if (x instanceof Vec2) {
+		r = y;
+		y = x.y;
+		x = x.x;
+	    }
+	    if (LuaState.style[0].ellipseMode == 1) {
+		r -=x;
+	    } else if (LuaState.style[0].ellipseMode == 2) {
+		x -= r/2;
+		y -= r/2;
+	    } else if (LuaState.style[0].ellipseMode == 3) {
+		x -= r/2;
+		y -= r/2;
+		r *= 2;
+	    }
+	    var p = self.applyTransformation(x,y);
+	    var d = LuaState.transformation[0].determinant();
+	    d = Math.sqrt(d) * r;
+	    ctx.save();
+	    ctx.beginPath();
+	    ctx.setTransform(d,0,0,d,p.x,p.y);
+	    ctx.arc(0,0,1,0, 2 * Math.PI,false);
+	    ctx.restore();
+	    if (LuaState.style[0].fill) {
+		ctx.fill();
+	    }
+	    if (LuaState.style[0].stroke) {
+		ctx.stroke();
+	    }
+	},
 	ellipseMode: function() {
 	    var m = this;
 	    if (m !== window) {
@@ -1320,6 +1387,9 @@ How should the angles interact with the transformation?
 	applyTransformation: function() {
 	    LuaState.transformation[0] = LuaState.transformation[0].applyTransformation(this);
 	},
+	composeTransformation: function() {
+	    LuaState.transformation[0] = LuaState.transformation[0].composeTransformation(this);
+	},
 	modelTransformation: function() {
 	    if (this !== window) {
 		LuaState.transformation[0] = new Transformation(this);
@@ -1355,7 +1425,7 @@ How should the angles interact with the transformation?
 	    return new Path(a,b);
 	},
 	log: function() {
-	    console.log(this);
+	    console.log(this.toString());
 	},
 	parameter: {
 	    text: function(i,f) {
@@ -1628,6 +1698,10 @@ How should the angles interact with the transformation?
 		self.point = p;
 	    }
 
+	    this.close = function() {
+		self.path.push(["closePath",[]]);
+	    }
+
 	    this.curveTo = function(bx,by,cx,cy,dx,dy) {
 		if (bx instanceof Vec2) {
 		    dy = dx
@@ -1711,11 +1785,54 @@ How should the angles interact with the transformation?
 		self.point = p;
 	    }
 
-	    this.draw = function(b,m) {
-		var p;
-		if (b) {
-		    if (typeof m === 'undefined')
+	    this.draw = function(opts) {
+		if (typeof opts === "undefined")
+		    opts = new Table;
+		var d = opts.get("draw");
+		if (!d)
+		    opts.set("draw",true);
+		self.use(opts);
+	    }
+
+	    this.fill = function(opts) {
+		if (typeof opts === "undefined")
+		    opts = new Table;
+		var d = opts.get("fill");
+		if (!d)
+		    opts.set("fill",true);
+		self.use(opts);
+	    }
+
+	    this.filldraw = function(opts) {
+		if (typeof opts === "undefined")
+		    opts = new Table;
+		var d = opts.get("draw");
+		if (!d)
+		    opts.set("draw",true);
+		d = opts.get("fill");
+		if (!d)
+		    opts.set("fill",true);
+		self.use(opts);
+	    }
+
+	    this.use = function(opts) {
+		var p,b,m,c,w,d,f;
+		if (typeof opts !== "undefined") {
+		    b = opts.get("transformShape");
+		    if (typeof b === "undefined")
+			b = false;
+		    m = opts.get("transformation");
+		    if (typeof m === "undefined") {
 			m = LuaState.transformation[0];
+		    } else {
+			b = true;
+		    }
+		    c = opts.get("colour");
+		    w = opts.get("strokeWidth");
+		    d = opts.get("draw");
+		    f = opts.get("fill");
+		}
+		if (b) {
 		    p = [];
 		    self.path.forEach(function(v) {
 			var a = argTransform[v[0]](m,v[1]);
@@ -1725,16 +1842,28 @@ How should the angles interact with the transformation?
 		    p = self.path;
 		}
 		ctx.save();
+		ctx.save();
 		ctx.setTransform(1,0,0,1,0,0);
 		ctx.beginPath();
 		p.forEach(function(v) {
 		    ctx[v[0]].apply(ctx,v[1]);
 		});
 		ctx.restore();
-		if (LuaState.style[0].stroke)
+		if (c) {
+		    ctx.strokeStyle = c.toCSS();
+		    ctx.fillStyle = c.toCSS();
+		}
+		if (d instanceof Colour)
+		    ctx.strokeStyle = d.toCSS();
+		if (f instanceof Colour)
+		    ctx.fillStyle = d.toCSS();
+		if (w)
+		    ctx.lineWidth = w;
+		if (f)
+		    ctx.fill()
+		if (d)
 		    ctx.stroke();
-		if (LuaState.style[0].fill)
-		    ctx.fill();
+		ctx.restore();
 	    }
 
 	    this.clear = function() {
@@ -1922,7 +2051,25 @@ function Colour(r,g,b,a) {
 
 function Transformation(a,b,c,d,e,f) {
     if (typeof(a) !== 'undefined') {
-	if (a instanceof Transformation || typeof(a) === 'array') {
+	if (a instanceof Vec2) {
+	    f = e;
+	    e = d;
+	    d = c;
+	    c = b;
+	    b = a.y;
+	    a = a.x;
+	}
+	if (c instanceof Vec2) {
+	    f = e;
+	    e = d;
+	    d = c.y;
+	    c = c.x;
+	}
+	if (e instanceof Vec2) {
+	    f = e.y;
+	    e = e.x;
+	}
+	if (a instanceof Transformation || Array.isArray(a)) {
 	    for (var i = 1; i <= 6; i++) {
 		this[i] = a[i];
 	    }
@@ -1949,7 +2096,6 @@ function Transformation(a,b,c,d,e,f) {
 	this[5] = 0;
 	this[6] = 0;
     }
-
     return this;
 }
 
@@ -2016,14 +2162,14 @@ Transformation.prototype.postscale = function(a,b) {
 }
     
 Transformation.prototype.xsheer = function(a) {
-    nm = new Transformation(this);
+    var nm = new Transformation(this);
     nm[3] += nm[1] * a;
     nm[4] += nm[2] * a;
     return nm;
 }
     
 Transformation.prototype.ysheer = function(a) {
-    nm = new Transformation(this);
+    var nm = new Transformation(this);
     nm[1] += nm[3] * a;
     nm[2] += nm[4] * a;
     return nm;
@@ -2042,6 +2188,24 @@ Transformation.prototype.rotate = function(ang,x,y) {
     var cs = Math.cos(ang);
     var sn = Math.sin(ang);
     return this.composeTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+}
+
+Transformation.prototype.determinant = function() {
+    return this[1] * this[4] - this[2] * this[3];
+}
+
+Transformation.prototype.inverse = function() {
+    var nm = [];
+    var d = this.determinant();
+    if (d === 0)
+	return false;
+    nm[1] = this[4]/d;
+    nm[2] = -this[2]/d;
+    nm[3] = -this[3]/d;
+    nm[4] = this[1]/d;
+    nm[5] = - nm[1] * nm[5] - nm[3] * nm[6];
+    nm[6] = - nm[2] * nm[5] - nm[4] * nm[6];
+    return new Transformation(nm);
 }
 
 Transformation.prototype.__mul = function(a,b) {
@@ -2225,6 +2389,22 @@ Vec2.prototype.rotate90 = function() {
 Vec2.prototype.toString = function() {
 	return '(' + this.x + ',' + this.y + ')';
     }
+
+/*
+For when a JS function is expecting a Lua table but none came from Lua
+*/
+
+function Table() {
+    var prop = {};
+
+    this.get = function(s) {
+	return prop[s];
+    }
+
+    this.set = function(s,v) {
+	prop[s] = v;
+    }
+}
 
 
 /*
