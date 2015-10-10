@@ -1,19 +1,26 @@
-./js/addon/edit/matchbrackets.js
-./js/addon/edit/closebrackets.js
-./js/jquery-1.11.3.min.js
-./js/lua.js
-./js/lua.vm.js
-./js/codemirror.js
-./js/main.js
-./js/jquery-ui.min.js
-./index.html
-./about.html
-./help.html
-./css/help.css
-./css/images/*.png
-./css/jquery-ui.min.css
-./css/main.css
-./css/about.css
-./css/codemirror.css
-./css/theme/*.css
-./projects/*.lua
++ js/
++ js/addon/
++ js/addon/edit/
++ js/addon/edit/matchbrackets.js
++ js/addon/edit/closebrackets.js
++ js/jquery-1.11.3.min.js
++ js/lua.js
++ js/lua.vm.js
++ js/codemirror.js
++ js/main.js
++ js/jquery-ui.min.js
++ index.html
++ about.html
++ help.html
++ css/
++ css/help.css
++ css/images/*.png
++ css/jquery-ui.min.css
++ css/main.css
++ css/about.css
++ css/codemirror.css
++ css/theme/
++ css/theme/*.css
++ projects/
++ projects/*.lua
+- *
