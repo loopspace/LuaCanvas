@@ -854,8 +854,8 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 	params.empty();
 	if (gr) {
 	    // Canvas dimensions
-	    g.set('WIDTH',$(ctx.canvas).attr('width'));
-	    g.set('HEIGHT',$(ctx.canvas).attr('height'));
+	    g.set('WIDTH',parseInt($(ctx.canvas).attr('width'),10));
+	    g.set('HEIGHT',parseInt($(ctx.canvas).attr('height'),10));
 	    // Rectangle and Ellipse modes
 	    g.set('CORNER',0);
 	    g.set('CORNERS',1);
