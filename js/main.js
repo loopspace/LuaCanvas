@@ -732,17 +732,17 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 		pgy = e.pageY;
 	    }
 	    x = Math.floor(pgx - $(ctx.canvas).offset().left);
-	    y = $(ctx.canvas).offset().top + parseInt($(ctx.canvas).attr('height'),10) - pgy;
+	    y = parseInt($(ctx.canvas).offset().top,10) + parseInt($(ctx.canvas).attr('height'),10) - pgy;
 	    if (e.type == 'mousedown' || e.type == 'touchstart') {
-		s = 'BEGAN';
+		s = 0;
 	    } else if (e.type == 'mousemove' || e.type == 'touchmove') {
-		s = 'MOVING';
+		s = 1;
 		px = prevTouch.x;
 		py = prevTouch.y;
 		dx = x - px;
 		dy = x - py;
 	    } else if (e.type == 'mouseup' || e.type == 'mouseleave' || e.type == 'touchend' || e.type == 'touchcancel') {
-		s = 'ENDED';
+		s = 2;
 		px = prevTouch.x;
 		py = prevTouch.y;
 		dx = x - px;
@@ -751,7 +751,7 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 	    var t = {
 		state: s,
 		id: id,
-		time: e.timestamp - sTime,
+		time: e.timeStamp - sTime,
 		x: x,
 		y: y,
 		prevX: px,
@@ -876,6 +876,10 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 	    g.set('ROUND',0);
 	    g.set('SQUARE',1);
 	    g.set('PROJECT',2);
+	    // touches
+	    g.set('BEGAN',0);
+	    g.set('MOVING',1);
+	    g.set('ENDED',2);
 	    Object.keys(LuaGrExt).forEach(function(v,i,a) {
 		g.set(v, LuaGrExt[v]);
 	    })
@@ -941,6 +945,9 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 	    if (w instanceof Vec2) {
 		h = w.y;
 		w = w.x;
+	    }
+	    if (typeof(h) === "undefined") {
+		h = w;
 	    }
 	    if (LuaState.style[0].rectMode == 1) {
 		w -=x;
@@ -1429,7 +1436,11 @@ How should the angles interact with the transformation?
 	    var x = this;
 	    return new Vec2(x,y);
 	},
-	coordinate: function(y) {
+	coordinate: function(y) { // depreciated, not good notation
+	    var x = this;
+	    return new Vec2(x,y);
+	},
+	point: function(y) {
 	    var x = this;
 	    return new Vec2(x,y);
 	},
@@ -2341,6 +2352,12 @@ function Vec2(a,b) {
 	} else if (typeof(a) === 'array') {
 	    this.x = a[0];
 	    this.y = a[1];
+	} else if (a instanceof Vec2) {
+	    this.x = a.x;
+	    this.y = a.y;
+	} else if (typeof(a) === 'object' && a.x && a.y && (typeof(a.x) === 'number' || a.x instanceof Number) && (typeof(a.y) === 'number' || a.y instanceof Number)) {
+	    this.x = a.x;
+	    this.y = a.y;
 	} else {
 	    this.x = 0;
 	    this.y = 0;
