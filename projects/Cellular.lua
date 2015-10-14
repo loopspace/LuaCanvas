@@ -2,28 +2,28 @@
 --## Main
 
 function setup()
-	size = 10
+  size = 10
   rule = {}
-	parameter.action("Restart",restart)
+  parameter.action("Restart",restart)
   parameter.action("Continuous",function() persist = not persist nextLine() end)
   parameter.action("Shift Up", function() clear = true end)
   parameter.action("Random Start", function() clear = true for k=1,size do if math.random() > .5 then grid[k] = 1 end end end)
   parameter.action("Draw", nextLine) 
-  parameter.integer("Rule",0,255,101, newRule)
-  parameter.integer("size",10,WIDTH,10,restart)
-  parameter.colour("edgeColour",colour(255))
-  parameter.colour("shadeColour",colour(200))
+  parameter.integer("Rule","Rule",0,255,101, newRule)
+  parameter.integer("Size","size",10,WIDTH,10,restart)
+  parameter.colour("Edge Colour","edgeColour",colour(255))
+  parameter.colour("Shade Colour","shadeColour",colour(200))
   newRule(101)
   restart()
 end
 
 function draw()
   if clear then
-  	background(40,40,50)
+    background(40,40,50)
     h = 1
     clear = false
     drawSq = true
-    end
+  end
   stroke(edgeColour)
   if drawSq then
     for k=1,size do
@@ -46,7 +46,7 @@ function draw()
 end
 
 function touched(t)
-  if h==2 and t.state == "ENDED" and t.y > HEIGHT - sqwidth then
+  if h==2 and t.state == ENDED and t.y > HEIGHT - sqwidth then
     local sq = math.floor(t.x/sqwidth) + 1
     grid[sq] = 1 - grid[sq]
     clear = true
@@ -54,12 +54,12 @@ function touched(t)
 end
 
 function restart()
-    sqwidth = WIDTH/size
+  sqwidth = WIDTH/size
   h = 1
   grid = {}
-	for k=1,size do
+  for k=1,size do
     table.insert(grid,0)
-    end
+  end
   clear = true
   persist = false
 end
@@ -74,11 +74,11 @@ function nextLine()
     g[k] = rule[a*4 + b*2 + c + 1]
   end
   grid = g
-	drawSq = true
+  drawSq = true
 end
 
 function newRule(n)
-	rule = {}
+  rule = {}
   for k = 1,8 do
     table.insert(rule,n%2)
     n = math.floor(n/2)

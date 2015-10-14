@@ -7,7 +7,7 @@ function setup()
   coordinates = {{colour = colour(255,255,255)}}
   parameter.watch("Number of Coordinates","#coordinates[1]")
   parameter.action("Undo",function() table.remove(coordinates[1]) end)
-  parameter.colour("lineColour",colour(255,255,255),function(c) coordinates[1].colour = c end)
+  parameter.colour("Line Colour","lineColour",colour(255,255,255),function(c) coordinates[1].colour = c end)
   parameter.action("New Set of Lines",function() table.insert(coordinates,1,{colour = lineColour}) end)
   parameter.action("Show",function() for k,v in ipairs(coordinates) do print("---") for l,u in ipairs(v) do print(u) end end end)
   parameter.action("Clear", function() coordinates = {{colour = lineColour }}
@@ -90,5 +90,4 @@ function Grid:draw()
   end
   popStyle()
   end
-
 

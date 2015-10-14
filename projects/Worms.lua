@@ -36,15 +36,15 @@ local dirs = {
 }
 
 function setup()
-  parameter.integer("size",10,100,10,restart)
-  parameter.integer("speed",1,10)
+  parameter.integer("Size","size",10,100,10,restart)
+  parameter.integer("Speed","speed",1,10)
   parameter.action("Restart",restart)
   parameter.action("Step",step)
-  parameter.boolean("Run",false)
-  parameter.colour("Grid","grey")
-  parameter.colour("Worm","orange")
-  parameter.colour("Eaten","brown")
-  parameter.integer("rule",0,48,10,restart)
+  parameter.boolean("Run","Run",false)
+  parameter.colour("Grid","Grid","grey")
+  parameter.colour("Worm","Worm","orange")
+  parameter.colour("Eaten","Eaten","brown")
+  parameter.integer("Rule","rule",0,48,10,restart)
   parameter.watch("DeltaTime")
   ly = vec2(1,0):rotate(60)
   lz = vec2(1,0):rotate(120)
@@ -60,13 +60,15 @@ function draw()
   scale(sqwidth)
   strokeWidth(2)
   stroke(Grid)
-  local j
 	for k=0,gridheight do
     line(0,k*ht,gridwidth,k*ht)
   end
-  local l = math.floor(gridwidth/2)
-  for k=0,3*l do
-    line(k-l,0,(k-l)*lx.x + ly.x*gridheight,ly.y*gridheight)
+  for k=0,gridheight,2 do
+    line(0,k*ht,gridwidth,k*ht+2*gridwidth*ht)
+    line(gridwidth,k*ht,0,k*ht+2*gridwidth*ht)
+  end
+  for k=0,gridwidth do
+    line(k,0,k*lx.x + ly.x*gridheight,ly.y*gridheight)
     line(k,0,k*lx.x + lz.x*gridheight,lz.y*gridheight)
   end
   local wd = wormdir:rotate(dangle*clamp((ElapsedTime - wtime)*spd*speed))

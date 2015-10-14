@@ -2,10 +2,10 @@
 --## Main
 
 function setup()
-	parameter.integer("multiplier",1,12,3)
-  parameter.integer("clock",2,15,9)
-  parameter.integer("angleStep",2,10,4)
-  parameter.number("fadeFactor",0,1,0)
+	parameter.integer("Multiplier","multiplier",1,12,3)
+  parameter.integer("Clock Number","clock",2,15,9)
+  parameter.integer("Angle Step","angleStep",2,10,4)
+  parameter.number("Fade Factor","fadeFactor",0,1,0)
   parameter.action("Generate",generate)
   generate()
   background(40,40,50)

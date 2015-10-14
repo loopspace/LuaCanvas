@@ -10,8 +10,6 @@ function draw()
   g:draw()
 end
 
-
-
 --## Grid
 
 Grid = class()
@@ -25,7 +23,7 @@ function Grid:draw()
   local n,s = self.size,self.scale
   local sf = math.min((WIDTH-20)/(2*n),(HEIGHT-20)/(2*n))
   local xm,ym = math.floor((WIDTH-20)/(2*sf)),math.floor((HEIGHT-20)/(2*sf))
-   pushStyle()
+  pushStyle()
   translate(WIDTH/2,HEIGHT/2)
   scale(sf)
   stroke(100)
@@ -37,7 +35,7 @@ function Grid:draw()
   for k=1,ym do
     line(-xm,k,xm,k)
     line(-xm,-k,xm,-k)
-    end
+  end
   stroke(255)
   line(0,-ym,0,ym)
   line(-xm,0,xm,0)
@@ -59,6 +57,15 @@ function Grid:draw()
     text(-k,-1,-k)
   end
   popStyle()
-  end
+end
 
-
+function Grid:invtransform(v,p)
+  p = p or 0
+  local n,s = self.size,self.scale
+  local sf = math.min((WIDTH-20)/(2*n),(HEIGHT-20)/(2*n))
+  local xm,ym = math.floor((WIDTH-20)/(2*sf)),math.floor((HEIGHT-20)/(2*sf))
+  local x,y = v.x - WIDTH/2, v.y - HEIGHT/2
+  x = math.floor(x/sf*10^p+.5)/10^p
+  y = math.floor(y/sf*10^p+.5)/10^p
+  return vec2(x,y)
+end

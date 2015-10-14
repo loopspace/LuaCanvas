@@ -2,10 +2,10 @@
 --## Main
 
 function setup()
-  parameter.integer("size",10,100,10,restart)
+  parameter.integer("Size","size",10,100,10,restart)
   parameter.action("Restart",restart)
   parameter.action("Step",step)
-  parameter.boolean("Run",false)
+  parameter.boolean("Run","Run",false)
 --  parameter.watch("DeltaTime")
   restart()
 end
@@ -74,7 +74,7 @@ function step()
 end
 
 function touched(t)
-  if t.state == "ENDED" then
+  if t.state == ENDED then
     local sqx = math.floor(t.x/sqwidth)+1
     local sqy = math.floor(t.y/sqwidth)+1
     grid[sqx][sqy] = 1 - grid[sqx][sqy]
