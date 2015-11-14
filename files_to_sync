@@ -4,6 +4,7 @@
 + js/addon/edit/matchbrackets.js
 + js/addon/edit/closebrackets.js
 + js/jquery-1.11.3.min.js
++ js/jquery.ui.touch-punch.min.js
 + js/lua.js
 + js/lua.vm.js
 + js/codemirror.js
