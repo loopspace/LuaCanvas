@@ -648,6 +648,7 @@ function LuaCanvas(c,o,p) {
 	    },
 	    touches: [],
 	    watches: [],
+	    parameters: []
 	}
     }
     
@@ -816,6 +817,9 @@ Currently only records a single touch.  Needs a bit of work to track multiple to
 		function() {
 		    LuaState.transformation = [new Transformation()];
 		    ctx = gctx;
+		    LuaState.parameters.forEach(
+			function(f) { f() }
+		    );
 		    try {
 			draw();
 		    } catch(e) {
@@ -1486,11 +1490,17 @@ How should the angles interact with the transformation?
 		h = w;
 		w = y;
 		y = x.y;
-		x = x.y;
+		x = x.x;
 	    }
 	    if (w instanceof Vec2) {
 		h = w.y;
 		w = w.x;
+	    }
+	    if (typeof(x) === 'undefined') {
+		x = 0;
+	    }
+	    if (typeof(y) === 'undefined') {
+		y = 0;
 	    }
 	    if (typeof(h) === 'undefined') {
 		h = $(img).prop('height');
@@ -1498,8 +1508,13 @@ How should the angles interact with the transformation?
 	    if (typeof(w) === 'undefined') {
 		w = $(img).prop('width');
 	    }
-	    y = ctx.canvas.height - y - h;
-	    ctx.drawImage(img,x,y,w,h);
+	    var p = self.applyTransformation(x,y+h);
+	    var r = self.applyTransformationNoShift(1,0).normalise();
+	    var s = self.applyTransformationNoShift(0,-1).normalise();
+	    ctx.save();
+	    ctx.setTransform(r.x,r.y,s.x,s.y,p.x,p.y);
+	    ctx.drawImage(img,0,0,w,h);
+	    ctx.restore();
 	},
 	saveImage: function(s) {
 	    var img=this;
@@ -1532,6 +1547,13 @@ How should the angles interact with the transformation?
 		tfield.addClass('text');
 		tfield.attr('type','text');
 		tfield.val(i);
+		LuaState.parameters.push(
+		    function() {
+			if (! tfield.is(":focus")) {
+			    tfield.val(LuaG.get(n));
+			};
+		    }
+		);
 		var cfn;
 		if (typeof(f) === "function") {
 		    cfn = function(e) {
@@ -1579,6 +1601,12 @@ How should the angles interact with the transformation?
 		    value: i,
 		    step: v
 		});
+		LuaState.parameters.push(
+		    function() {
+			slider.slider("value",LuaG.get(n));
+			tval.text(LuaG.get(n));
+		    }
+		);
 		var tname = $('<span>');
 		tname.text(title);
 		tname.addClass('parameter');
@@ -1613,6 +1641,11 @@ How should the angles interact with the transformation?
 		    }
 		    sel.append(op);
 		}
+		LuaState.parameters.push(
+		    function() {
+			sel.val(LuaG.get(n));
+		    }
+		);
 		var cfn;
 		if (typeof(f) === "function") {
 		    cfn = function(e) {
@@ -1665,6 +1698,15 @@ How should the angles interact with the transformation?
 		tfield.addClass('colour');
 		tfield.attr('type','color');
 		tfield.val(ic.toHex());
+		LuaState.parameters.push(
+		    function() {
+			console.log(tfield.is(":focus"));
+			if (! tfield.is(":focus")) {
+			    tfield.val(LuaG.get(c).toHex());
+			}
+		    }
+		);
+
 		var cfn;
 		if (typeof(f) === "function") {
 		    cfn = function(e) {
@@ -1678,7 +1720,7 @@ How should the angles interact with the transformation?
 			return false;
 		    }
 		}
-		tfield.change(cfn);
+		tfield.on('input',cfn);
 		var pdiv = $('<div>');
 		pdiv.addClass('parameter');
 		pdiv.append(tname);
@@ -1717,6 +1759,12 @@ How should the angles interact with the transformation?
 		tfield.attr('type','checkbox');
 		tfield.attr('checked',i);
 		tfield.uniqueId();
+		LuaState.parameters.push(
+		    function() {
+			tfield.prop("checked",LuaG.get(n));
+		    }
+		);
+
 		var lbl = $('<label>');
 		lbl.addClass('onoffswitch-label');
 		lbl.attr('for',tfield.attr('id'));
@@ -2277,7 +2325,7 @@ Transformation.prototype.rotate = function(ang,x,y) {
     ang *= Math.PI/180;
     var cs = Math.cos(ang);
     var sn = Math.sin(ang);
-    return this.composeTransformation([cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
+    return this.composeTransformation([null,cs,sn,-sn,cs,x - cs * x + sn * y,y - sn * x - cs * y]);
 }
 
 Transformation.prototype.determinant = function() {
@@ -2481,6 +2529,10 @@ Vec2.prototype.rotate = function(a) {
 Vec2.prototype.rotate90 = function() {
 	return new Vec2(-this.y,this.x);
     }
+
+Vec2.prototype.angleBetween = function(v) {
+    return (Math.atan2(v.y,v.x) - Math.atan2(this.y,this.x))*180/Math.PI;
+}
 
 Vec2.prototype.toString = function() {
 	return '(' + this.x + ',' + this.y + ')';
