@@ -3,11 +3,8 @@
 
 function setup()
   turtle = Turtle()
-  for k = 1,6 do
-    turtle:forward(100)
-    turtle:right(60)
-  end
-  turtle:left(30)
+  -- Turtle instructions go here
+  
   protractor = Protractor()
   ruler = Ruler()
 end
@@ -98,7 +95,7 @@ function Turtle:penDown()
     })
 end
 
-function Turtle:setWidth(w)
+function Turtle:setPenWidth(w)
   table.insert(self.actions,{
       init = function() self.width = w end,
       draw = function() return true end,
@@ -106,7 +103,9 @@ function Turtle:setWidth(w)
     })
 end
 
-function Turtle:setPenColour(c)
+function Turtle:setPenColour(...)
+  local t = {...}
+  local c = colour(table.unpack(t))
   table.insert(self.actions,{
       init = function() self.colour = c end,
       draw = function() return true end,
@@ -182,11 +181,110 @@ end
 function Turtle:fill()
 end
 
+function Turtle:toAngle(a)
+  local sd,st,sa
+  table.insert(self.actions,{
+      init = function() 
+        sd = self.dir 
+        st = ElapsedTime
+        a = a - vec2(1,0):angleBetween(self.dir)
+        a = (a + 180)%360 - 180
+      end,
+      draw = function()
+        local t = step((ElapsedTime - st)*self.speed/math.abs(a))
+        self.dir = sd:rotate(t*a)
+        if t >= 1 then
+          return true
+        end
+      end,
+      finish = function() self.dir = sd:rotate(a) end
+    })
+end
+
+function Turtle:toRelativeAngle(a)
+  local sd,st,sa
+  table.insert(self.actions,{
+      init = function()
+        sd = self.dir
+        st = ElapsedTime
+        a = a - self.pos:angleBetween(self.dir)
+        a = (a + 180)%360 - 180
+      end,
+      draw = function()
+        local t = step((ElapsedTime - st)*self.speed/math.abs(a))
+        self.dir = sd:rotate(t*a)
+        if t >= 1 then
+          return true
+        end
+      end,
+      finish = function() self.dir = sd:rotate(a) end
+    })
+end
+
+function Turtle:toPosition(...)
+  local p = vec2(...)
+  local st,sp,d
+  table.insert(self.actions,{
+      init = function() sp = self.pos st = ElapsedTime  d = (p - sp):len() end,
+      draw = function()
+        local t = step((ElapsedTime - st)*self.speed/math.abs(d))
+        local ep = (1 - t)*sp + t*p
+        if self.drawing then
+          stroke(self.colour)
+          strokeWidth(self.width)
+          line(sp.x,sp.y,ep.x,ep.y)
+        end
+        self.pos = ep
+        if t >= 1 then
+          return true
+        end
+      end,
+      finish = function()
+        self.pos = p
+        if self.drawing then
+          stroke(self.colour)
+          strokeWidth(self.width)
+          line(sp,self.pos)
+        end
+      end
+    })
+end
+
+function Turtle:toRelativePosition(...)
+  local p = vec2(...)
+  local st,sp,d
+  table.insert(self.actions,{
+      init = function() sp = self.pos st = ElapsedTime  d = p:len() end,
+      draw = function()
+        local t = step((ElapsedTime - st)*self.speed/math.abs(d))
+        local ep = sp + t*p
+        if self.drawing then
+          stroke(self.colour)
+          strokeWidth(self.width)
+          line(sp.x,sp.y,ep.x,ep.y)
+        end
+        self.pos = ep
+        if t >= 1 then
+          return true
+        end
+      end,
+      finish = function()
+        self.pos = sp + t*p
+        if self.drawing then
+          stroke(self.colour)
+          strokeWidth(self.width)
+          line(sp,self.pos)
+        end
+      end
+    })
+end
+
 function step(t,a,b)
   a = a or 0
   b = b or 1
   return math.min(b,math.max(a,t))
 end
+
 
 
 --## Protractor
@@ -259,7 +357,6 @@ function Protractor:touched(t)
   end
   return true
 end
-
 
 
 --## Ruler
@@ -341,5 +438,4 @@ function Ruler:touched(t)
   end
   return true
 end
-
 
