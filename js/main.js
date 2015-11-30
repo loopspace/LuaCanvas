@@ -1994,7 +1994,7 @@ How should the angles interact with the transformation?
 		if (d instanceof Colour)
 		    ctx.strokeStyle = d.toCSS();
 		if (f instanceof Colour)
-		    ctx.fillStyle = d.toCSS();
+		    ctx.fillStyle = f.toCSS();
 		if (w)
 		    ctx.lineWidth = w;
 		if (f)
@@ -2029,7 +2029,7 @@ How should the angles interact with the transformation?
 		    p.y += ch;
 		    return [p.x,p.y];
 		},
-		curveTo: function(m,a) {
+		bezierCurveTo: function(m,a) {
 		    var ch = ctx.canvas.height;
 		    var x,y,p;
 		    x = a[0];
