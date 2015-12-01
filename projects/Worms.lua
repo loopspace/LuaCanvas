@@ -44,7 +44,7 @@ function setup()
   parameter.colour("Grid","Grid","grey")
   parameter.colour("Worm","Worm","orange")
   parameter.colour("Eaten","Eaten","brown")
-  parameter.integer("Rule","rule",0,48,10,restart)
+  parameter.integer("Rule","rule",0,47,10,restart)
   parameter.watch("DeltaTime")
   ly = vec2(1,0):rotate(60)
   lz = vec2(1,0):rotate(120)
@@ -121,24 +121,34 @@ function restart()
   eaten = {worm}
   wtime = ElapsedTime
   Died = false
+  local r = rule
   choices = {}
+  choices[5] = math.floor(r/24) + 1
+  r = r%24
+  choices[4] = math.floor(r/6) + 1
+  r = r%6
+  choices[3] = math.floor(r/2) + 1
+  r = r%2
+  choices[2] = r + 1
   choices[0] = false
   choices[1] = 1
-  choices[2] = rule%2 + 1
-  choices[3] = rule%3 + 1
-  choices[4] = math.floor(rule/2)%4 + 1
-  choices[5] = math.floor(rule/8)%2 + 1
   local opt
-  print("No exits: die")
-  print("One exit: follow it")
+--  print("No exits: die")
+  print("No exits: 0")
+--  print("One exit: follow it")
+  print("One exit: 1")
   if choices[2] == 1 then opt = "left" else opt = "right" end
-  print("Two exits: " .. opt)
+--  print("Two exits: " .. opt)
+  print("Two exits: " .. choices[2])
   if choices[3] == 1 then opt = "left" elseif choices[3] == 2 then opt = "middle" else opt = "right" end
-  print("Three exits: " .. opt .. " exit")
+--  print("Three exits: " .. opt .. " exit")
+  print("Three exits: " .. choices[3])
   if choices[4] == 1 then opt = "first" elseif choices[4] == 2 then opt = "second" elseif choices[4] == 3 then opt = "third" else opt = "fourth" end
-  print("Four exits: " .. opt .. " exit")
+--  print("Four exits: " .. opt .. " exit")
+  print("Four exits: " .. choices[4])
   if choices[5] == 1 then opt = "first" else opt = "second" end
-  print("Five exits: " .. opt)
+--  print("Five exits: " .. opt)
+  print("Five exits: " .. choices[5])
 end
 
 function step()
